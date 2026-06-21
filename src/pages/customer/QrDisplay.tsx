@@ -8,7 +8,7 @@ export default function QrDisplay() {
   const state = location.state as { booking: Booking; equipment: Equipment; action: 'start' | 'end' } | null;
 
   if (!state || !state.booking) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/customer" replace />;
   }
 
   const { booking, equipment, action } = state;
@@ -17,7 +17,7 @@ export default function QrDisplay() {
 
   return (
     <div className="max-w-md mx-auto pt-8">
-      <Link to="/booking-success" state={{ booking, equipment }} className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-6 font-medium">
+      <Link to="/customer/booking-success" state={{ booking, equipment }} className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-6 font-medium">
         <ArrowLeft className="w-4 h-4" /> Back to Booking
       </Link>
 

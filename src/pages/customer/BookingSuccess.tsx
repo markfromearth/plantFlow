@@ -7,7 +7,7 @@ export default function CustomerBookingSuccess() {
   const state = location.state as any;
 
   if (!state || !state.booking) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/customer" replace />;
   }
 
   const { booking, equipment } = state;
@@ -68,14 +68,14 @@ export default function CustomerBookingSuccess() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-slate-100">
             <Link 
-              to="/qr" 
+              to="/customer/qr" 
               state={{ booking, equipment, action: 'start' }} 
               className="flex-1 text-center py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors"
             >
               Start Hire QR
             </Link>
             <Link 
-              to="/qr" 
+              to="/customer/qr" 
               state={{ booking, equipment, action: 'end' }} 
               className="flex-1 text-center py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors"
             >
@@ -93,7 +93,7 @@ export default function CustomerBookingSuccess() {
           
           <div className="text-center">
             <Link 
-              to="/" 
+              to="/customer" 
               className="text-slate-500 hover:text-slate-900 font-medium transition-colors"
             >
               Back to Equipment List

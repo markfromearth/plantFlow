@@ -1,26 +1,28 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Users, HardHat } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { HardHat, Users } from 'lucide-react';
 
 export default function RoleSwitcher() {
+  const location = useLocation();
   const navigate = useNavigate();
+  const isOperator = location.pathname.startsWith('/operator');
+
+  // Don't show the switcher on the landing page
+  if (location.pathname === '/') {
+    return null;
+  }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 bg-white/90 backdrop-blur-sm shadow-xl rounded-full p-1.5 flex items-center gap-1 border border-indigo-100">
+    <div className="fixed bottom-4 right-4 z-50">
       <button
-        onClick={() => navigate('/')}
-        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        onClick={() => navigate(isOperator ? '/customer' : '/operator')}
+        className="bg-white p-3 rounded-full shadow-lg border border-slate-200 flex items-center gap-2 hover:bg-slate-50 transition-colors text-slate-700"
+        title={`Switch to ${isOperator ? 'Customer' : 'Operator'} View`}
       >
-        <Users className="w-4 h-4 text-slate-600" />
-        <span className="hidden sm:inline text-slate-700">Customer View</span>
-      </button>
-      <div className="w-px h-6 bg-slate-200"></div>
-      <button
-        onClick={() => navigate('/operator')}
-        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      >
-        <HardHat className="w-4 h-4 text-indigo-600" />
-        <span className="hidden sm:inline text-slate-700">Operator Console</span>
+        {isOperator ? <Users className="w-5 h-5" /> : <HardHat className="w-5 h-5" />}
+        <span className="hidden sm:inline font-medium">
+          {isOperator ? 'Customer View' : 'Operator Console'}
+        </span>
       </button>
     </div>
   );

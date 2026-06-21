@@ -23,7 +23,7 @@ export default function CustomerEquipmentDetails() {
     return (
       <div className="text-center py-20">
         <h2 className="text-2xl font-bold text-slate-900">Equipment not found</h2>
-        <button onClick={() => navigate('/')} className="mt-4 text-indigo-600 hover:underline">Return to home</button>
+        <button onClick={() => navigate('/customer')} className="mt-4 text-indigo-600 hover:underline">Return to home</button>
       </div>
     );
   }
@@ -61,13 +61,13 @@ export default function CustomerEquipmentDetails() {
     };
 
     addBooking(newBooking);
-    navigate('/booking-success', { state: { booking: newBooking, equipment: item } });
+    navigate('/customer/booking-success', { state: { booking: newBooking, equipment: item } });
   };
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in duration-300">
       <button 
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/customer')}
         className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" /> Back to equipment

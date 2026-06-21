@@ -56,7 +56,7 @@ export default function CustomerHome() {
                     {searchResults.map(item => (
                       <li key={item.machine_id}>
                         <Link 
-                          to="/" 
+                          to={`/customer/equipment/${item.machine_id}`} 
                           className="flex items-center gap-4 p-3 hover:bg-slate-50 transition-colors"
                           onClick={() => setSearchQuery('')}
                         >
@@ -148,7 +148,7 @@ export default function CustomerHome() {
             <div key={category.id} id={category.id} className="scroll-mt-6">
               <h3 className="text-2xl font-black text-slate-800 mb-6 border-b-2 border-slate-100 pb-2 flex justify-between items-end">
                 {category.name}
-                <Link to={`/`} className="text-indigo-600 text-sm font-bold hover:underline mb-1 flex items-center gap-1">
+                <Link to={`/customer`} className="text-indigo-600 text-sm font-bold hover:underline mb-1 flex items-center gap-1">
                   View All <ChevronRight className="w-4 h-4" />
                 </Link>
               </h3>
@@ -157,7 +157,7 @@ export default function CustomerHome() {
                 {categoryEquipment.map((item) => (
                   <Link 
                     key={item.machine_id} 
-                    to={`/`}
+                    to={`/customer/equipment/${item.machine_id}`}
                     className="flex flex-col bg-white rounded-2xl overflow-hidden hover:-translate-y-1 transition-all group shadow-sm border border-slate-200 hover:shadow-xl"
                   >
                     <div className="relative h-48 sm:h-56 overflow-hidden bg-slate-100">
