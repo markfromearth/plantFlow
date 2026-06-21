@@ -94,7 +94,7 @@ export default function OperatorAddEquipment() {
   };
 
   const writeToSheets = async (accessToken: string, eq: Equipment) => {
-    let spreadsheetId = localStorage.getItem('hirehub_spreadsheet_id');
+    let spreadsheetId = localStorage.getItem('plantflow_os_spreadsheet_id');
     
     if (!spreadsheetId) {
       // Create new spreadsheet
@@ -105,7 +105,7 @@ export default function OperatorAddEquipment() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          properties: { title: 'HireHub Inventory' },
+          properties: { title: 'PlantFlow OS Inventory' },
           sheets: [{ properties: { title: 'Inventory' } }]
         })
       });
@@ -115,7 +115,7 @@ export default function OperatorAddEquipment() {
       }
       const createData = await createRes.json();
       spreadsheetId = createData.spreadsheetId;
-      localStorage.setItem('hirehub_spreadsheet_id', spreadsheetId as string);
+      localStorage.setItem('plantflow_os_spreadsheet_id', spreadsheetId as string);
 
       // Add headers
       await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Inventory!A1:J1:append?valueInputOption=USER_ENTERED`, {

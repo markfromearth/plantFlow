@@ -1,9 +1,9 @@
 {
-  "projectId": "listlyv2-3cb93",
-  "appId": "1:70717102199:web:28420b53e64fbaf7f14e72",
-  "apiKey": "AIzaSyDDDbgTHJT_0_a6oxtxEIoJV4Q1J0boypg",
-  "authDomain": "listlyv2-3cb93.firebaseapp.com",
-  "storageBucket": "listlyv2-3cb93.firebasestorage.app",
-  "messagingSenderId": "70717102199",
-  "measurementId": ""
+  "apiKey": "AIzaSyAUXbyL-7efk0uzkQ2sSEQrcY3QaImdW5U",
+  "authDomain": "plantflow-os.firebaseapp.com",
+  "projectId": "plantflow-os",
+  "storageBucket": "plantflow-os.firebasestorage.app",
+  "messagingSenderId": "1089724230678",
+  "appId": "1:1089724230678:web:96221c10b94a707cb25937",
+  "measurementId": "G-EG0HQW7R5J"
 }

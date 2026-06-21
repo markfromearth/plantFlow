@@ -17,7 +17,7 @@ const CustomerLayout = () => {
             <div className="bg-indigo-600 p-2 rounded-lg">
               <HardHat className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-slate-900 tracking-tight">HireHub</span>
+            <span className="text-xl font-bold text-slate-900 tracking-tight">PlantFlow OS</span>
           </Link>
           <nav className="flex items-center gap-4">
             <Link to="/" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Equipment</Link>
@@ -36,7 +36,7 @@ const CustomerLayout = () => {
       </main>
       <footer className="bg-slate-900 text-slate-400 py-12 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm">
-          &copy; {new Date().getFullYear()} HireHub Equipment Hire. All rights reserved.
+          &copy; {new Date().getFullYear()} PlantFlow OS Equipment Hire. All rights reserved.
         </div>
       </footer>
     </div>

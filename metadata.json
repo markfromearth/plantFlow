@@ -1,5 +1,5 @@
 {
-  "name": "HireHub",
+  "name": "plantflow-os",
   "description": "SaaS platform prototype for independent UK plant-hire operators",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

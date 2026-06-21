@@ -324,10 +324,10 @@ async function fetchInventory() {
       throw new Error(\`Network response failed: \${response.status}\`);
     }
     const data = await response.json();
-    console.log('[HireHub SDK] Retrieved active fleet:', data);
+    console.log('[PlantFlow OS SDK] Retrieved active fleet:', data);
     return data.data; // List of active machines
   } catch (error) {
-    console.error('[HireHub SDK] Inventory retrieve crash:', error);
+    console.error('[PlantFlow OS SDK] Inventory retrieve crash:', error);
     throw error;
   }
 }`,
@@ -383,7 +383,7 @@ async function updateBookingStatusAPI(bookingId, actionType) {
 function handleTagScanned(scannedQrString) {
   console.log('[QR Handler] Processing scan:', scannedQrString);
   
-  // Format standard logic for HireHub plant operations:
+  // Format standard logic for PlantFlow OS plant operations:
   if (scannedQrString.endsWith('-START')) {
     const rawBookingID = extractBookingId(scannedQrString);
     console.log('Action: Initiating machine dispatch -> start_hire');
@@ -399,19 +399,19 @@ function handleTagScanned(scannedQrString) {
 }`,
     offlineSync: `// 5. Offline Queue Playback: Automated Sync Loop
 function saveToOfflineSyncQueue(type, payload) {
-  const currentQueue = JSON.parse(localStorage.getItem('hirehub_sync_queue') || '[]');
+  const currentQueue = JSON.parse(localStorage.getItem('plantflow_os_sync_queue') || '[]');
   currentQueue.push({
     id: 'sync-' + Date.now(),
     type,
     payload,
     timestamp: new Date().toISOString()
   });
-  localStorage.setItem('hirehub_sync_queue', JSON.stringify(currentQueue));
+  localStorage.setItem('plantflow_os_sync_queue', JSON.stringify(currentQueue));
   console.log('[Offline Engine] cached offline operational transaction.');
 }
 
 async function runAutomaticPlaybacks() {
-  const currentQueue = JSON.parse(localStorage.getItem('hirehub_sync_queue') || '[]');
+  const currentQueue = JSON.parse(localStorage.getItem('plantflow_os_sync_queue') || '[]');
   if (currentQueue.length === 0) return;
 
   console.log(\`[Sync Engine] Back online! processing \${currentQueue.length} jobs.\`);
@@ -429,7 +429,7 @@ async function runAutomaticPlaybacks() {
     }
   }
   // Clear persistent queue
-  localStorage.removeItem('hirehub_sync_queue');
+  localStorage.removeItem('plantflow_os_sync_queue');
 }`
   };
 
@@ -446,7 +446,7 @@ async function runAutomaticPlaybacks() {
               </span>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             </div>
-            <h2 className="text-xl font-black text-slate-100 mt-1">HireHub API Integration Sandbox</h2>
+            <h2 className="text-xl font-black text-slate-100 mt-1">PlantFlow OS API Integration Sandbox</h2>
             <p className="text-xs text-slate-400 mt-0.5 font-mono">
               Live database state verification and sync queue diagnostics.
             </p>
@@ -898,7 +898,7 @@ async function runAutomaticPlaybacks() {
                   <Terminal className="w-4 h-4 text-emerald-400" /> Complete Integration Scripts
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  100% executable ES6 JavaScript snippets for HireHub mobile operations.
+                  100% executable ES6 JavaScript snippets for PlantFlow OS mobile operations.
                 </p>
               </div>
 

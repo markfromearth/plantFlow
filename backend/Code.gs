@@ -1,5 +1,5 @@
 /**
- * Google Apps Script Backend for HireHub Plant-Hire
+ * Google Apps Script Backend for PlantFlow OS Plant-Hire
  * 
  * Deployment Instructions:
  * 1. Open Google Sheets -> Extensions -> Apps Script

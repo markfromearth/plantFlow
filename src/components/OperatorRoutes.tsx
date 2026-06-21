@@ -33,7 +33,7 @@ const OperatorLayout = () => {
   return (
     <div className={`min-h-[100dvh] bg-slate-100 flex flex-col font-sans pb-[72px] transition-all ${highVisMode ? 'theme-high-vis' : ''}`}>
       <header className="bg-indigo-600 text-white shadow-md sticky top-0 z-20 px-4 py-4 flex justify-between items-center w-full">
-        <Link to="/operator" className="text-xl font-bold tracking-tight hover:opacity-90">HireHub Console</Link>
+        <Link to="/operator" className="text-xl font-bold tracking-tight hover:opacity-90">PlantFlow OS Console</Link>
         <div className="flex items-center gap-2">
           <Link 
             to="/operator/integration" 
