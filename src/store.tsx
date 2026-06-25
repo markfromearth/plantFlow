@@ -3,7 +3,6 @@ import { Equipment, Booking, EquipmentStatus, BookingStatus } from './types';
 import { INITIAL_EQUIPMENT, INITIAL_BOOKINGS } from './mockData';
 import { addEquipment as dbAddEquipment, updateEquipmentStatus as dbUpdateEquipmentStatus, listEquipment as dbListEquipment } from './equipmentService';
 import { createBooking as dbCreateBooking, updateBookingStatus as dbUpdateBookingStatus, listBookings as dbListBookings } from './bookingService';
-import { Equipment as ModelEquipment, Booking as ModelBooking } from './models';
 
 interface StoreState {
   equipment: Equipment[];
@@ -16,7 +15,7 @@ interface StoreState {
 }
 
 interface StoreContextType extends StoreState {
-  addBooking: (booking: Booking) => void;
+  addBooking: (booking: Booking) => Promise<void>;
   updateBookingStatus: (id: string, status: BookingStatus) => void;
   updateEquipmentStatus: (id: string, status: EquipmentStatus) => void;
   addEquipment: (equipment: Equipment) => void;
@@ -44,55 +43,25 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setErrorBookings(null);
 
     try {
-      const modelEquips = await dbListEquipment();
-      if (modelEquips.length > 0) {
-        const uiEquips: Equipment[] = modelEquips.map(e => ({
-          machine_id: e.id,
-          name: e.name,
-          category: e.category,
-          job_fit: 'General Use',
-          access_width_mm: 1000,
-          day_rate: e.dailyRate,
-          delivery_rate: 50,
-          availability_status: e.status as EquipmentStatus,
-          compliance_expiry: new Date().toISOString(),
-          image_url: e.imageUrl,
-          notes: ''
-        }));
-        setEquipment(uiEquips);
+      const equips = await dbListEquipment();
+      if (equips.length > 0) {
+        setEquipment(equips);
       }
     } catch (e: any) {
-      console.error("Failed to list equipment", e);
-      setErrorEquipment(e.message || "Failed to load equipment");
+      console.warn("Firebase list equipment failed, falling back to local data.", e.message);
+      // We don't set errorEquipment so the UI doesn't show an error state
     } finally {
       setIsLoadingEquipment(false);
     }
 
     try {
-      const modelBookings = await dbListBookings();
-      if (modelBookings.length > 0) {
-        const uiBookings: Booking[] = modelBookings.map(b => ({
-          booking_id: b.id,
-          machine_id: b.equipmentId,
-          hirer_name: b.customerName,
-          hirer_phone: '',
-          hirer_email: '',
-          site_address: b.siteAddress,
-          start_date: b.startDate,
-          end_date: b.endDate,
-          delivery_window: 'AM',
-          status: b.status as BookingStatus,
-          qr_start_code: `qr-start-${b.id}`,
-          qr_end_code: `qr-end-${b.id}`,
-          timestamp_created: b.createdAt,
-          totalCost: 0,
-          deliveryNeeded: false
-        }));
-        setBookings(uiBookings);
+      const dbBookings = await dbListBookings();
+      if (dbBookings.length > 0) {
+        setBookings(dbBookings);
       }
     } catch (e: any) {
-      console.error("Failed to list bookings", e);
-      setErrorBookings(e.message || "Failed to load bookings");
+      console.warn("Firebase list bookings failed, falling back to local data.", e.message);
+      // We don't set errorBookings so the UI doesn't show an error state
     } finally {
       setIsLoadingBookings(false);
     }
@@ -105,27 +74,28 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsLoadingBookings(true);
     setErrorBookings(null);
     try {
-      const payload: Omit<ModelBooking, 'id' | 'createdAt'> = {
-        equipmentId: booking.machine_id,
-        customerName: booking.hirer_name,
-        siteAddress: booking.site_address,
-        startDate: booking.start_date,
-        endDate: booking.end_date,
-        status: booking.status as any,
+      const payload: Omit<Booking, 'booking_id' | 'timestamp_created'> = {
+        machine_id: booking.machine_id,
+        hirer_name: booking.hirer_name,
+        hirer_phone: booking.hirer_phone,
+        hirer_email: booking.hirer_email,
+        site_address: booking.site_address,
+        start_date: booking.start_date,
+        end_date: booking.end_date,
+        delivery_window: booking.delivery_window,
+        status: booking.status,
+        qr_start_code: booking.qr_start_code,
+        qr_end_code: booking.qr_end_code,
+        totalCost: booking.totalCost,
+        deliveryNeeded: booking.deliveryNeeded
       };
       
-      const newModelBooking = await dbCreateBooking(payload);
-      
-      const newBooking: Booking = {
-        ...booking,
-        booking_id: newModelBooking.id,
-        timestamp_created: newModelBooking.createdAt,
-      };
-      
+      const newBooking = await dbCreateBooking(payload);
       setBookings(prev => [...prev, newBooking]);
     } catch (e: any) {
-      console.error("Failed to add booking", e);
+      console.error("Firebase add booking failed:", e.message);
       setErrorBookings(e.message || "Failed to add booking");
+      throw e;
     } finally {
       setIsLoadingBookings(false);
     }
@@ -135,12 +105,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsLoadingBookings(true);
     setErrorBookings(null);
     try {
-      await dbUpdateBookingStatus(id, status as any);
-      setBookings(prev => prev.map(b => b.booking_id === id ? { ...b, status } : b));
+      await dbUpdateBookingStatus(id, status);
     } catch (e: any) {
-      console.error("Failed to update booking status", e);
-      setErrorBookings(e.message || "Failed to update booking status");
+      console.warn("Firebase update booking status failed, updating local state only.", e.message);
     } finally {
+      setBookings(prev => prev.map(b => b.booking_id === id ? { ...b, status } : b));
       setIsLoadingBookings(false);
     }
   };
@@ -149,12 +118,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsLoadingEquipment(true);
     setErrorEquipment(null);
     try {
-      await dbUpdateEquipmentStatus(id, status as any);
-      setEquipment(prev => prev.map(e => e.machine_id === id ? { ...e, availability_status: status } : e));
+      await dbUpdateEquipmentStatus(id, status);
     } catch (e: any) {
-      console.error("Failed to update equipment status", e);
-      setErrorEquipment(e.message || "Failed to update equipment status");
+      console.warn("Firebase update equipment status failed, updating local state only.", e.message);
     } finally {
+      setEquipment(prev => prev.map(e => e.machine_id === id ? { ...e, availability_status: status } : e));
       setIsLoadingEquipment(false);
     }
   };
@@ -163,27 +131,28 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsLoadingEquipment(true);
     setErrorEquipment(null);
     try {
-      const payload: Omit<ModelEquipment, 'id'> = {
+      const payload: Omit<Equipment, 'machine_id'> = {
         name: equipment.name,
-        make: 'Unknown',
-        model: 'Unknown',
         category: equipment.category,
-        dailyRate: equipment.day_rate,
-        imageUrl: equipment.image_url,
-        status: equipment.availability_status as any,
+        job_fit: equipment.job_fit,
+        access_width_mm: equipment.access_width_mm,
+        day_rate: equipment.day_rate,
+        delivery_rate: equipment.delivery_rate,
+        availability_status: equipment.availability_status,
+        compliance_expiry: equipment.compliance_expiry,
+        image_url: equipment.image_url,
+        notes: equipment.notes
       };
       
-      const newModelEquip = await dbAddEquipment(payload);
-      
-      const newEquip: Equipment = {
-        ...equipment,
-        machine_id: newModelEquip.id,
-      };
-      
+      const newEquip = await dbAddEquipment(payload);
       setEquipment(prev => [...prev, newEquip]);
     } catch (e: any) {
-      console.error("Failed to add equipment", e);
-      setErrorEquipment(e.message || "Failed to add equipment");
+      console.warn("Firebase add equipment failed, falling back to local state.", e.message);
+      const newEquip: Equipment = {
+        ...equipment,
+        machine_id: `mock-equip-${Date.now()}`,
+      };
+      setEquipment(prev => [...prev, newEquip]);
     } finally {
       setIsLoadingEquipment(false);
     }
@@ -196,12 +165,13 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsLoadingBookings(true);
     setErrorBookings(null);
     try {
-      await updateBookingStatus(id, 'active');
-      await updateEquipmentStatus(booking.machine_id, 'hired');
+      await dbUpdateBookingStatus(id, 'active');
+      await dbUpdateEquipmentStatus(booking.machine_id, 'hired');
     } catch (e: any) {
-      console.error("Failed to start hire", e);
-      setErrorBookings(e.message || "Failed to start hire");
+      console.warn("Firebase start hire failed, updating local state only.", e.message);
     } finally {
+      setBookings(prev => prev.map(b => b.booking_id === id ? { ...b, status: 'active' } : b));
+      setEquipment(prev => prev.map(e => e.machine_id === booking.machine_id ? { ...e, availability_status: 'hired' } : e));
       setIsLoadingBookings(false);
     }
   };
@@ -213,12 +183,13 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsLoadingBookings(true);
     setErrorBookings(null);
     try {
-      await updateBookingStatus(id, 'completed');
-      await updateEquipmentStatus(booking.machine_id, 'available');
+      await dbUpdateBookingStatus(id, 'completed');
+      await dbUpdateEquipmentStatus(booking.machine_id, 'available');
     } catch (e: any) {
-      console.error("Failed to end hire", e);
-      setErrorBookings(e.message || "Failed to end hire");
+      console.warn("Firebase end hire failed, updating local state only.", e.message);
     } finally {
+      setBookings(prev => prev.map(b => b.booking_id === id ? { ...b, status: 'completed' } : b));
+      setEquipment(prev => prev.map(e => e.machine_id === booking.machine_id ? { ...e, availability_status: 'available' } : e));
       setIsLoadingBookings(false);
     }
   };

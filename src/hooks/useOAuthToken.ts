@@ -1,33 +1,53 @@
 import { useState, useCallback, useEffect } from 'react';
+import { googleSignIn, initAuth, logout } from '../authService';
+import { User } from 'firebase/auth';
 
-export function useOAuthToken(scopes: string[]) {
+export function useOAuthToken() {
   const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [needsAuth, setNeedsAuth] = useState(true);
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // In production/preview environments, be careful with origin checks if necessary
-      // For now, accepting messages from the parent window
-      if (event.data?.type === 'OAUTH_TOKEN_RESPONSE') {
-        setIsLoading(false);
-        if (event.data.error) {
-          setError(event.data.error);
-        } else if (event.data.token) {
-          setToken(event.data.token);
-        }
+    const unsubscribe = initAuth(
+      (user, token) => {
+        setUser(user);
+        setToken(token);
+        setNeedsAuth(false);
+      },
+      () => {
+        setUser(null);
+        setToken(null);
+        setNeedsAuth(true);
       }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    );
+    return () => unsubscribe();
   }, []);
 
-  const requestToken = useCallback(() => {
+  const requestToken = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    window.parent.postMessage({ type: 'REQUEST_OAUTH_TOKEN', scopes }, '*');
-  }, [scopes]);
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setToken(result.accessToken);
+        setUser(result.user);
+        setNeedsAuth(false);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  return { token, error, isLoading, requestToken };
+  const handleLogout = useCallback(async () => {
+    await logout();
+    setToken(null);
+    setUser(null);
+    setNeedsAuth(true);
+  }, []);
+
+  return { token, user, needsAuth, error, isLoading, requestToken, logout: handleLogout };
 }

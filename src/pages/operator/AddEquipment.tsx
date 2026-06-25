@@ -14,7 +14,7 @@ export default function OperatorAddEquipment() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const { token, requestToken } = useOAuthToken(['https://www.googleapis.com/auth/spreadsheets']);
+  const { token, requestToken } = useOAuthToken();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingEquipment, setPendingEquipment] = useState<Equipment | null>(null);
 

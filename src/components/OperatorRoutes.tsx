@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, ListTodo, QrCode, ClipboardList, Sun, SunDim, Terminal } from 'lucide-react';
+import { Home, ListTodo, QrCode, ClipboardList, Sun, SunDim, Terminal, LogIn } from 'lucide-react';
 import { ErrorBoundary } from './ErrorBoundary';
+import { initAuth, googleSignIn } from '../authService';
+import { User } from 'firebase/auth';
 
 import OperatorDashboard from '../pages/operator/Dashboard';
 import HiresList from '../pages/operator/HiresList';
@@ -80,6 +82,42 @@ const OperatorLayout = () => {
 };
 
 export default function OperatorRoutes() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (u) => { setUser(u); setLoading(false); },
+      () => { setUser(null); setLoading(false); }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center">
+          <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <ClipboardList className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">PlantFlow OS Console</h1>
+          <p className="text-slate-500 mb-8">Sign in to manage your fleet and hires.</p>
+          <button 
+            onClick={() => googleSignIn()}
+            className="w-full bg-indigo-600 text-white font-medium px-4 py-3 rounded-xl hover:bg-indigo-700 active:bg-indigo-800 transition-colors flex items-center justify-center gap-2"
+          >
+            <LogIn className="w-5 h-5" />
+            Sign in with Google
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Routes>
       <Route element={<OperatorLayout />}>

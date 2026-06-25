@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
-import { ChevronRight, Search, Calendar, Package, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { ChevronRight, Search, Calendar, Package, ArrowUpRight, ArrowDownLeft, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { Booking } from '../../types';
+import { useOAuthToken } from '../../hooks/useOAuthToken';
 
 export default function HiresList() {
   const navigate = useNavigate();
   const { bookings, equipment } = useStore();
   const [filter, setFilter] = useState<'all' | 'pending' | 'active'>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const { token, requestToken } = useOAuthToken();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -18,6 +21,82 @@ export default function HiresList() {
   }, []);
 
   const getEqName = (id: string) => equipment.find(e => e.machine_id === id)?.name || 'Unknown Item';
+
+  const handleSyncToSheets = async () => {
+    if (!token) {
+      requestToken();
+      return;
+    }
+    
+    setIsSyncing(true);
+    try {
+      let spreadsheetId = localStorage.getItem('plantflow_os_hires_spreadsheet_id');
+      if (!spreadsheetId) {
+        const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            properties: { title: 'PlantFlow OS Hires' },
+            sheets: [{ properties: { title: 'Hires' } }]
+          })
+        });
+        
+        if (!createRes.ok) throw new Error('Failed to create spreadsheet');
+        const createData = await createRes.json();
+        spreadsheetId = createData.spreadsheetId;
+        localStorage.setItem('plantflow_os_hires_spreadsheet_id', spreadsheetId as string);
+
+        // Add headers
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Hires!A1:G1:append?valueInputOption=USER_ENTERED`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            values: [['Booking ID', 'Machine', 'Customer', 'Start Date', 'End Date', 'Status', 'Total Cost (£)']]
+          })
+        });
+      }
+
+      // Format data
+      const values = bookings.map(b => [
+        b.booking_id,
+        getEqName(b.machine_id),
+        b.hirer_name,
+        b.start_date,
+        b.end_date,
+        b.status,
+        b.totalCost || 0
+      ]);
+
+      // Just clear and rewrite (simple sync for prototype)
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Hires!A2:G:clear`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Hires!A2:G:append?valueInputOption=USER_ENTERED`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ values })
+      });
+
+      if (!appendRes.ok) throw new Error('Failed to sync hires');
+      
+      alert('Hires synchronized to Google Sheets successfully!');
+    } catch (err: any) {
+      alert(`Sync failed: ${err.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const filtered = bookings
     .filter(b => b.status !== 'completed' && b.status !== 'cancelled')
@@ -122,25 +201,35 @@ export default function HiresList() {
 
   return (
     <div className="space-y-6 pb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      
-      <div className="bg-white rounded-xl p-1.5 flex shadow-sm border border-slate-200">
-        <button 
-          onClick={() => setFilter('all')}
-          className={`flex-1 py-2.5 text-sm font-bold tracking-wide rounded-lg transition-colors ${filter === 'all' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+      <div className="flex items-center justify-between gap-3">
+        <div className="bg-white rounded-xl p-1.5 flex shadow-sm border border-slate-200 flex-1">
+          <button 
+            onClick={() => setFilter('all')}
+            className={`flex-1 py-2.5 text-sm font-bold tracking-wide rounded-lg transition-colors ${filter === 'all' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+          >
+            ALL
+          </button>
+          <button 
+            onClick={() => setFilter('pending')}
+            className={`flex-1 py-2.5 text-sm font-bold tracking-wide rounded-lg transition-colors ${filter === 'pending' ? 'bg-orange-500 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+          >
+            PENDING
+          </button>
+          <button 
+            onClick={() => setFilter('active')}
+            className={`flex-1 py-2.5 text-sm font-bold tracking-wide rounded-lg transition-colors ${filter === 'active' ? 'bg-emerald-500 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+          >
+            ACTIVE
+          </button>
+        </div>
+        
+        <button
+          onClick={handleSyncToSheets}
+          disabled={isSyncing}
+          className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-colors shrink-0 disabled:opacity-50"
         >
-          ALL
-        </button>
-        <button 
-          onClick={() => setFilter('pending')}
-          className={`flex-1 py-2.5 text-sm font-bold tracking-wide rounded-lg transition-colors ${filter === 'pending' ? 'bg-orange-500 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
-        >
-          PENDING
-        </button>
-        <button 
-          onClick={() => setFilter('active')}
-          className={`flex-1 py-2.5 text-sm font-bold tracking-wide rounded-lg transition-colors ${filter === 'active' ? 'bg-emerald-500 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
-        >
-          ACTIVE
+          {isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileSpreadsheet className="w-5 h-5" />}
+          <span className="hidden sm:inline">{token ? 'Sync to Sheets' : 'Connect Sheets'}</span>
         </button>
       </div>
 

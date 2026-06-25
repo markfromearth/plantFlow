@@ -38,9 +38,31 @@ export default function CustomerEquipmentDetails() {
   const vat = subtotal * 0.20;
   const totalCost = subtotal + vat;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getLocalTodayString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayStr = getLocalTodayString();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!startDate || !endDate || !name || !phone) return;
+    
+    if (startDate < todayStr) {
+      alert("Start date cannot be in the past.");
+      return;
+    }
+    
+    if (endDate < startDate) {
+      alert("End date must be on or after the start date.");
+      return;
+    }
 
     const newBooking = {
       booking_id: `bk-${Date.now()}`,
@@ -60,8 +82,17 @@ export default function CustomerEquipmentDetails() {
       deliveryNeeded
     };
 
-    addBooking(newBooking);
-    navigate('/customer/booking-success', { state: { booking: newBooking, equipment: item } });
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await addBooking(newBooking);
+      navigate('/customer/booking-success', { state: { booking: newBooking, equipment: item } });
+    } catch (err: any) {
+      setError(err.message || 'Failed to create booking. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -132,7 +163,7 @@ export default function CustomerEquipmentDetails() {
                     required
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={todayStr}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
                   />
                 </div>
@@ -143,7 +174,7 @@ export default function CustomerEquipmentDetails() {
                     required
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate || new Date().toISOString().split('T')[0]}
+                    min={startDate || todayStr}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
                   />
                 </div>
@@ -251,16 +282,31 @@ export default function CustomerEquipmentDetails() {
               </div>
             )}
 
+            {error && (
+              <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm font-medium animate-in fade-in">
+                {error}
+              </div>
+            )}
+
             <button 
               type="submit"
-              disabled={item.availability_status !== 'available'}
+              disabled={item.availability_status !== 'available' || isSubmitting}
               className={`w-full font-bold text-lg py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg ${
-                item.availability_status === 'available' 
+                item.availability_status === 'available' && !isSubmitting
                   ? 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98] shadow-indigo-200'
                   : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
               }`}
             >
-              Continue to Pricing <ArrowRight className="w-5 h-5" />
+              {isSubmitting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  Continue to Pricing <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </button>
             <p className="text-center text-xs text-slate-500">No payment taken now. We will confirm availability.</p>
           </form>

@@ -4,14 +4,14 @@ import { ChevronRight, Search, Calendar } from 'lucide-react';
 import { INITIAL_EQUIPMENT } from '../../mockData';
 
 const CATEGORIES = [
-  { id: 'Excavators', name: 'Excavators', image: '/images/mini_digger_1781357985087.jpg' },
-  { id: 'Dumpers', name: 'Dumpers', image: '/images/hi_tip_dumper_1781358015457.jpg' },
-  { id: 'Compaction', name: 'Compaction', image: '/images/wacker_plate_1781358033267.jpg' },
-  { id: 'Groundcare', name: 'Groundcare', image: '/images/trencher_1781358047416.jpg' },
-  { id: 'Access', name: 'Access', image: '/images/scissor_lift_1781358239898.jpg' },
-  { id: 'Power & Light', name: 'Power & Light', image: '/images/generator_3kva_1781358330592.jpg' },
-  { id: 'Breaking', name: 'Breaking', image: '/images/breaker_110v_1781358344746.jpg' },
-  { id: 'Floor Care', name: 'Floor Care', image: '/images/floor_sander_1781358280768.jpg' }
+  { id: 'Excavators', name: 'Excavators', image: '/images/mini_digger_1781357985087.webp' },
+  { id: 'Dumpers', name: 'Dumpers', image: '/images/hi_tip_dumper_1781358015457.webp' },
+  { id: 'Compaction', name: 'Compaction', image: '/images/wacker_plate_1781358033267.webp' },
+  { id: 'Groundcare', name: 'Groundcare', image: '/images/trencher_1781358047416.webp' },
+  { id: 'Access', name: 'Access', image: '/images/scissor_lift_1781358239898.webp' },
+  { id: 'Power & Light', name: 'Power & Light', image: '/images/generator_3kva_1781358330592.webp' },
+  { id: 'Breaking', name: 'Breaking', image: '/images/breaker_110v_1781358344746.webp' },
+  { id: 'Floor Care', name: 'Floor Care', image: '/images/floor_sander_1781358280768.webp' }
 ];
 
 export default function CustomerHome() {
