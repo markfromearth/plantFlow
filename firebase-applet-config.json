@@ -4,7 +4,8 @@
   "apiKey": "AIzaSyAUXbyL-7efk0uzkQ2sSEQrcY3QaImdW5U",
   "authDomain": "plantflow-os.firebaseapp.com",
   "firestoreDatabaseId": "(default)",
-  "storageBucket": "plantflow-os.appspot.com",
+  
+  "storageBucket": "plantflow-os.firebasestorage.app",
   "messagingSenderId": "1089724230678",
   "measurementId": ""
 }
