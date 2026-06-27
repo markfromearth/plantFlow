@@ -8,3 +8,5 @@ coverage/
 !.env.example
 outputsremix.txt
 outputss.txt
+gemini firebase audit.txt
+gemini firebase audit.pdf
