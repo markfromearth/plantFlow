@@ -1,37 +1,45 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can only read/write their own profile
-    match /users/{uid} {
-      allow read, write: if request.auth.uid == uid;
-    }
-
-    // Tenant-level isolation
+    // Tenant document (operator / hire business)
     match /tenants/{tenantId} {
-      allow read: if request.auth.token.tenantId == tenantId;
-
-      // Machines
-      match /machines/{machineId} {
-        allow read, write: if request.auth.token.tenantId == tenantId;
-      }
-
-      // Operators
-      match /operators/{operatorId} {
-        allow read, write: if request.auth.token.tenantId == tenantId;
-      }
-
-      // Bookings
-      match /bookings/{bookingId} {
-        allow read, write: if request.auth.token.tenantId == tenantId;
-      }
+      allow read: if true; // storefront can see business info
+      allow write: if request.auth.uid == request.resource.data.ownerUid;
     }
 
-    // Audit logs: server-only
-    match /audit/{id} {
-      allow read: if request.auth != null;
-      allow write: if false;
+    // Inventory (machines)
+    match /tenants/{tenantId}/inventory/{machineId} {
+      allow read: if true;
+      allow write: if request.auth.uid ==
+        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
+    }
+
+    // Bookings (customer collection slots)
+    match /tenants/{tenantId}/bookings/{bookingId} {
+      allow read: if true;
+      // customers can create bookings; operators can manage them
+      allow write: if true;
+    }
+
+    // Availability (optional optimisation)
+    match /tenants/{tenantId}/availability/{machineId} {
+      allow read: if true;
+      allow write: if request.auth.uid ==
+        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
+    }
+
+    // Settings (operator configuration)
+    match /tenants/{tenantId}/settings/{docId} {
+      allow read, write: if request.auth.uid ==
+        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
+    }
+
+    // AI logs (optional)
+    match /tenants/{tenantId}/aiLogs/{logId} {
+      allow read, write: if request.auth.uid ==
+        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
     }
   }
 }
-
