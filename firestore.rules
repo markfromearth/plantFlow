@@ -3,52 +3,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Tenant document (operator / hire business)
+    // Tenant document
     match /tenants/{tenantId} {
-      // Anyone can read basic business info (for storefront)
       allow read: if true;
-
-      // Only the owner can write/update the tenant document
       allow write: if request.auth.uid == request.resource.data.ownerUid;
     }
 
     // Inventory (machines)
     match /tenants/{tenantId}/inventory/{machineId} {
-      // Public read: customers must be able to see machines
       allow read: if true;
-
-      // Only the tenant owner can create/update inventory
       allow write: if request.auth.uid ==
         get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
     }
 
-    // Bookings (customer collection slots)
+    // Bookings
     match /tenants/{tenantId}/bookings/{bookingId} {
-      // Public read: customers and operators can see bookings
       allow read: if true;
-
-      // Anyone can create a booking (MVP)
-      // You can tighten this later to require auth if needed
       allow write: if true;
-    }
-
-    // Availability (optional optimisation)
-    match /tenants/{tenantId}/availability/{machineId} {
-      allow read: if true;
-      allow write: if request.auth.uid ==
-        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
-    }
-
-    // Settings (operator configuration)
-    match /tenants/{tenantId}/settings/{docId} {
-      allow read, write: if request.auth.uid ==
-        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
-    }
-
-    // AI logs (optional)
-    match /tenants/{tenantId}/aiLogs/{logId} {
-      allow read, write: if request.auth.uid ==
-        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
     }
   }
 }
