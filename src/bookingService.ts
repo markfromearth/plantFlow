@@ -2,10 +2,13 @@ import { collection, doc, getDocs, getDoc, addDoc, updateDoc, query, where, orde
 import { db } from './firebase';
 import { Booking, BookingStatus } from './types';
 
+// Your Firestore rules require tenant‑scoped collections.
+// This MUST match: /tenants/{tenantId}/bookings
 const TENANT_ID = 'plantflow-os';
 
 export async function listBookings(status?: BookingStatus): Promise<Booking[]> {
   const bookingsCol = collection(db, `tenants/${TENANT_ID}/bookings`);
+
   let q = query(bookingsCol, orderBy('timestamp_created', 'desc'));
 
   if (status) {
@@ -17,22 +20,37 @@ export async function listBookings(status?: BookingStatus): Promise<Booking[]> {
   }
 
   const bookingsSnapshot = await getDocs(q);
-  return bookingsSnapshot.docs.map(doc => ({ booking_id: doc.id, ...doc.data() } as Booking));
+
+  return bookingsSnapshot.docs.map(doc => ({
+    booking_id: doc.id,
+    ...doc.data()
+  }) as Booking);
 }
 
 export async function getBooking(id: string): Promise<Booking | null> {
   const bookingDoc = doc(db, `tenants/${TENANT_ID}/bookings/${id}`);
   const bookingSnapshot = await getDoc(bookingDoc);
+
   if (!bookingSnapshot.exists()) return null;
-  return { booking_id: bookingSnapshot.id, ...bookingSnapshot.data() } as Booking;
+
+  return {
+    booking_id: bookingSnapshot.id,
+    ...bookingSnapshot.data()
+  } as Booking;
 }
 
 export async function createBooking(payload: Omit<Booking, 'booking_id' | 'timestamp_created'>): Promise<Booking> {
   const bookingsCol = collection(db, `tenants/${TENANT_ID}/bookings`);
+
   const timestamp_created = new Date().toISOString();
   const bookingData = { ...payload, timestamp_created };
+
   const docRef = await addDoc(bookingsCol, bookingData);
-  return { booking_id: docRef.id, ...bookingData } as Booking;
+
+  return {
+    booking_id: docRef.id,
+    ...bookingData
+  } as Booking;
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus): Promise<void> {

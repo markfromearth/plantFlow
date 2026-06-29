@@ -1,26 +1,31 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
     "module": "ESNext",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "skipLibCheck": true,
     "moduleResolution": "bundler",
+
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
     "isolatedModules": true,
     "moduleDetection": "force",
+
     "allowJs": true,
-    "jsx": "react-jsx",
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+
+    "paths": {
+      "@/*": ["./*"]
+    },
+
+    "types": ["vite/client"],               // ⭐ REQUIRED for CSS, SVG, PNG imports
+    "resolveJsonModule": true,             // ⭐ REQUIRED for firebase-applet-config.json
+    "allowSyntheticDefaultImports": true,  // ⭐ Recommended for Firebase SDK
+    "esModuleInterop": true,               // ⭐ Prevents import bugs
+    "forceConsistentCasingInFileNames": true
   }
 }
