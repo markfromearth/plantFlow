@@ -5,7 +5,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { initAuth, googleSignIn } from '../authService';
 import { User } from 'firebase/auth';
 
-import OperatorDashboard from '../pages/operator/Dashboard';
+import OperatorHome from '../pages/operator/OperatorHome';
 import HiresList from '../pages/operator/HiresList';
 import OperatorScan from '../pages/operator/Scan';
 import OperatorHireDetails from '../pages/operator/HireDetails';
@@ -121,7 +121,7 @@ export default function OperatorRoutes() {
   return (
     <Routes>
       <Route element={<OperatorLayout />}>
-        <Route index element={<OperatorDashboard />} />
+        <Route index element={<OperatorHome/>} />
         <Route path="hires" element={<HiresList />} />
         <Route path="scan" element={<OperatorScan />} />
         <Route path="hires/:id" element={<OperatorHireDetails />} />

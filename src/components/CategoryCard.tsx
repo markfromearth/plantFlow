@@ -17,9 +17,7 @@ export const CategoryCard: React.FC<Props> = ({ category, label }) => {
         className="category-image"
         loading="lazy"
       />
-      <div className="category-label">
-        {label}
-      </div>
+      <div className="category-label">{label}</div>
     </div>
   );
 };
