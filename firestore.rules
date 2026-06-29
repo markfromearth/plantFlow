@@ -3,23 +3,51 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Tenant document
+    // Tenant document (operator / hire business)
     match /tenants/{tenantId} {
+      // Public read so storefront can load business info
       allow read: if true;
+
+      // Only the owner can update tenant settings
       allow write: if request.auth.uid == request.resource.data.ownerUid;
     }
 
     // Inventory (machines)
     match /tenants/{tenantId}/inventory/{machineId} {
+      // Public read so customers can browse machines
+      allow read: if true;
+
+      // Only the tenant owner can add/update machines
+      allow write: if request.auth.uid ==
+        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
+    }
+
+    // Bookings (customer collection slots)
+    match /tenants/{tenantId}/bookings/{bookingId} {
+      // Public read so customers + operators can see bookings
+      allow read: if true;
+
+      // Anyone can create a booking (MVP mode)
+      allow write: if true;
+    }
+
+    // Availability (optional)
+    match /tenants/{tenantId}/availability/{machineId} {
       allow read: if true;
       allow write: if request.auth.uid ==
         get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
     }
 
-    // Bookings
-    match /tenants/{tenantId}/bookings/{bookingId} {
-      allow read: if true;
-      allow write: if true;
+    // Operator settings
+    match /tenants/{tenantId}/settings/{docId} {
+      allow read, write: if request.auth.uid ==
+        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
+    }
+
+    // AI logs (optional)
+    match /tenants/{tenantId}/aiLogs/{logId} {
+      allow read, write: if request.auth.uid ==
+        get(/databases/$(database)/documents/tenants/$(tenantId)).data.ownerUid;
     }
   }
 }
