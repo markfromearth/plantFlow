@@ -2,31 +2,33 @@ import { collection, doc, getDocs, getDoc, addDoc, updateDoc, query, where, orde
 import { db } from './firebase';
 import { Booking, BookingStatus } from './types';
 
-const COLLECTION_NAME = 'bookings';
+const TENANT_ID = 'plantflow-os';
 
 export async function listBookings(status?: BookingStatus): Promise<Booking[]> {
-  const bookingsCol = collection(db, COLLECTION_NAME);
+  const bookingsCol = collection(db, `tenants/${TENANT_ID}/bookings`);
   let q = query(bookingsCol, orderBy('timestamp_created', 'desc'));
-  
+
   if (status) {
-    q = query(bookingsCol, where('status', '==', status), orderBy('timestamp_created', 'desc'));
+    q = query(
+      bookingsCol,
+      where('status', '==', status),
+      orderBy('timestamp_created', 'desc')
+    );
   }
-  
+
   const bookingsSnapshot = await getDocs(q);
   return bookingsSnapshot.docs.map(doc => ({ booking_id: doc.id, ...doc.data() } as Booking));
 }
 
 export async function getBooking(id: string): Promise<Booking | null> {
-  const bookingDoc = doc(db, COLLECTION_NAME, id);
+  const bookingDoc = doc(db, `tenants/${TENANT_ID}/bookings/${id}`);
   const bookingSnapshot = await getDoc(bookingDoc);
-  if (!bookingSnapshot.exists()) {
-    return null;
-  }
+  if (!bookingSnapshot.exists()) return null;
   return { booking_id: bookingSnapshot.id, ...bookingSnapshot.data() } as Booking;
 }
 
 export async function createBooking(payload: Omit<Booking, 'booking_id' | 'timestamp_created'>): Promise<Booking> {
-  const bookingsCol = collection(db, COLLECTION_NAME);
+  const bookingsCol = collection(db, `tenants/${TENANT_ID}/bookings`);
   const timestamp_created = new Date().toISOString();
   const bookingData = { ...payload, timestamp_created };
   const docRef = await addDoc(bookingsCol, bookingData);
@@ -34,6 +36,6 @@ export async function createBooking(payload: Omit<Booking, 'booking_id' | 'times
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus): Promise<void> {
-  const bookingDoc = doc(db, COLLECTION_NAME, id);
+  const bookingDoc = doc(db, `tenants/${TENANT_ID}/bookings/${id}`);
   await updateDoc(bookingDoc, { status });
 }
