@@ -28,7 +28,7 @@ export default function OperatorAddEquipment() {
     delivery_rate: '',
     availability_status: 'available',
     compliance_expiry: '',
-    image_url: 'https://images.unsplash.com/photo-1541888086425-d81bb19240f5?q=80&w=400&auto=format&fit=crop',
+image_url: '/images/default.jpg',
     notes: ''
   });
 
