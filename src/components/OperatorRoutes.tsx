@@ -5,7 +5,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { initAuth, googleSignIn } from '../authService';
 import { User } from 'firebase/auth';
 
-import OperatorHome from '../pages/operator/OperatorHome';
+import OperatorDashboard from '../pages/operator/Dashboard';
 import HiresList from '../pages/operator/HiresList';
 import OperatorScan from '../pages/operator/Scan';
 import OperatorHireDetails from '../pages/operator/HireDetails';
@@ -20,7 +20,7 @@ const NavItem = ({ to, icon, label }: { to: string; icon: React.ReactNode; label
   
   return (
     <Link 
-      to={to} 
+      to={to}   
       className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${isActive ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-900'}`}
     >
       {icon}
@@ -121,7 +121,7 @@ export default function OperatorRoutes() {
   return (
     <Routes>
       <Route element={<OperatorLayout />}>
-        <Route index element={<OperatorHome/>} />
+        <Route index element={<OperatorDashboard/>} />
         <Route path="hires" element={<HiresList />} />
         <Route path="scan" element={<OperatorScan />} />
         <Route path="hires/:id" element={<OperatorHireDetails />} />
