@@ -65,7 +65,8 @@ export default function CustomerHome() {
                             alt={item.name} 
                             className="w-12 h-12 rounded bg-slate-100 object-cover" 
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/images/mini_digger_1781357985087.webp';
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = '/images/mini_digger_1781357985087.webp';
                             }}
                           />
                           <div className="flex-1 min-w-0">
@@ -116,7 +117,8 @@ export default function CustomerHome() {
                   alt={category.name} 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/images/mini_digger_1781357985087.webp';
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/images/mini_digger_1781357985087.webp';
                   }}
                 />
               </div>
@@ -166,7 +168,8 @@ export default function CustomerHome() {
                         alt={item.name} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => {
-                           (e.target as HTMLImageElement).src = '/images/mini_digger_1781357985087.webp';
+                           e.currentTarget.onerror = null;
+                           e.currentTarget.src = '/images/mini_digger_1781357985087.webp';
                         }}
                       />
                       <div className="absolute top-4 left-4 px-3 py-1 rounded shadow-md text-xs font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200">
