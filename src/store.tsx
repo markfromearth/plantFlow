@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Equipment, Booking, EquipmentStatus, BookingStatus } from './types';
 import { INITIAL_EQUIPMENT, INITIAL_BOOKINGS } from './mockData';
 import { addEquipment as dbAddEquipment, updateEquipmentStatus as dbUpdateEquipmentStatus, listEquipment as dbListEquipment } from './equipmentService';
 import { createBooking as dbCreateBooking, updateBookingStatus as dbUpdateBookingStatus, listBookings as dbListBookings } from './bookingService';
+import { initAuth } from './authService';
 
 interface StoreState {
   equipment: Equipment[];
@@ -38,9 +39,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const init = async () => {
     setIsLoadingEquipment(true);
-    setIsLoadingBookings(true);
     setErrorEquipment(null);
-    setErrorBookings(null);
 
     try {
       const equips = await dbListEquipment();
@@ -49,23 +48,33 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     } catch (e: any) {
       console.warn("Firebase list equipment failed, falling back to local data.", e.message);
-      // We don't set errorEquipment so the UI doesn't show an error state
     } finally {
       setIsLoadingEquipment(false);
     }
-
-    try {
-      const dbBookings = await dbListBookings();
-      if (dbBookings.length > 0) {
-        setBookings(dbBookings);
-      }
-    } catch (e: any) {
-      console.warn("Firebase list bookings failed, falling back to local data.", e.message);
-      // We don't set errorBookings so the UI doesn't show an error state
-    } finally {
-      setIsLoadingBookings(false);
-    }
   };
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      async (user, token) => {
+        setIsLoadingBookings(true);
+        setErrorBookings(null);
+        try {
+          const dbBookings = await dbListBookings();
+          if (dbBookings.length > 0) {
+            setBookings(dbBookings);
+          }
+        } catch (e: any) {
+          console.warn("Failed to load real bookings from database:", e.message);
+        } finally {
+          setIsLoadingBookings(false);
+        }
+      },
+      () => {
+        setBookings(INITIAL_BOOKINGS);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   const toggleHighVisMode = () => setHighVisMode(prev => !prev);
 
