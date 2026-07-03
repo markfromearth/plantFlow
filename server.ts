@@ -4,6 +4,8 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import rateLimit from "express-rate-limit";
 import * as dotenv from "dotenv";
+import { put } from "@vercel/blob";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -139,6 +141,54 @@ If confidence is below 0.4:
     res.status(500).json({ error: "Failed to analyze image" });
   }
 });
+
+app.post("/api/upload", requireApiKey, async (req, res) => {
+  try {
+    const { imageBase64, filename } = req.body;
+    
+    if (!imageBase64) {
+      return res.status(400).json({ error: "Image is required" });
+    }
+
+    // Parse base64 data
+    const matches = imageBase64.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.*)$/);
+    let mimeType = "image/jpeg";
+    let base64Data = imageBase64;
+    
+    if (matches && matches.length === 3) {
+      mimeType = matches[1];
+      base64Data = matches[2];
+    } else {
+      // If it doesn't match standard data URI prefix but is raw base64, clean up prefix if it has one
+      base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+    }
+    
+    const buffer = Buffer.from(base64Data, "base64");
+    
+    // Generate unique immutable filename using random UUID and content hash
+    const ext = filename ? filename.split('.').pop() || 'jpg' : 'jpg';
+    const uuid = crypto.randomUUID();
+    const hash = crypto.createHash("sha256").update(buffer).digest("hex").substring(0, 12);
+    const blobPath = `equipment/${uuid}_${hash}.${ext}`;
+
+    console.log(`Uploading dynamic image to Vercel Blob: ${blobPath} (${mimeType}, size=${buffer.length} bytes)`);
+
+    // Upload to Vercel Blob
+    const blob = await put(blobPath, buffer, {
+      access: "public",
+      addRandomSuffix: false, // We generate a secure unique name ourselves
+      contentType: mimeType,
+    });
+
+    // Set cache control for response
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.json({ url: blob.url });
+  } catch (error: any) {
+    console.error("Vercel Blob upload error:", error);
+    res.status(500).json({ error: "Failed to upload image to Vercel Blob storage: " + error.message });
+  }
+});
+
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

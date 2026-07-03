@@ -54,14 +54,33 @@ image_url: '/images/default.jpg',
         reader.readAsDataURL(file);
       });
 
-      // Update form data to show the image locally 
-      setFormData(prev => ({ ...prev, image_url: base64Data }));
+      // 1. Upload the image to Vercel Blob storage first
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_OPERATOR_API_KEY || 'my_secret_operator_api_key',
+        },
+        body: JSON.stringify({ imageBase64: base64Data, filename: file.name }),
+      });
 
-      // Send to AI for analysis
+      if (!uploadRes.ok) {
+        const uploadErr = await uploadRes.json();
+        throw new Error(uploadErr.error || 'Failed to upload image to storage');
+      }
+
+      const uploadData = await uploadRes.json();
+      const blobUrl = uploadData.url;
+
+      // Update form data to show the image locally and set public CDN URL for saving
+      setFormData(prev => ({ ...prev, image_url: blobUrl }));
+
+      // 2. Send to AI for analysis (with API key check)
       const res = await fetch('/api/analyze-equipment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_OPERATOR_API_KEY || 'my_secret_operator_api_key',
         },
         body: JSON.stringify({ imageBase64: base64Data }),
       });
