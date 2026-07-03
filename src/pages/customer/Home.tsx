@@ -31,7 +31,7 @@ export default function CustomerHome() {
       
       {/* Hero Header Area */}
       <div className="px-5 pt-8 pb-7 bg-indigo-700 text-white relative">
-        <div className="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1541888086425-d81bb19240f5?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center"></div>
+        <div className="absolute inset-0 opacity-10 bg-[url('/images/three_tonne_digger_1781358002768.webp')] bg-cover bg-center"></div>
         <div className="relative z-20 max-w-4xl mx-auto">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2 leading-tight">What do you need to hire?</h1>
           <p className="text-indigo-100 text-sm sm:text-base font-medium mb-6">Quality tools & machinery for your next job.</p>
@@ -65,7 +65,7 @@ export default function CustomerHome() {
                             alt={item.name} 
                             className="w-12 h-12 rounded bg-slate-100 object-cover" 
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1541888086425-d81bb19240f5?q=80&w=400&auto=format&fit=crop';
+                              (e.target as HTMLImageElement).src = '/images/mini_digger_1781357985087.webp';
                             }}
                           />
                           <div className="flex-1 min-w-0">
@@ -116,7 +116,7 @@ export default function CustomerHome() {
                   alt={category.name} 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1541888086425-d81bb19240f5?q=80&w=600&auto=format&fit=crop';
+                    (e.target as HTMLImageElement).src = '/images/mini_digger_1781357985087.webp';
                   }}
                 />
               </div>
@@ -166,7 +166,7 @@ export default function CustomerHome() {
                         alt={item.name} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => {
-                           (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1541888086425-d81bb19240f5?q=80&w=400&auto=format&fit=crop';
+                           (e.target as HTMLImageElement).src = '/images/mini_digger_1781357985087.webp';
                         }}
                       />
                       <div className="absolute top-4 left-4 px-3 py-1 rounded shadow-md text-xs font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200">
