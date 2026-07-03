@@ -2,17 +2,34 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import rateLimit from "express-rate-limit";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: "50mb" }));
 
+// Rate limiter for AI endpoint
+const aiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 10, // Limit each IP to 10 requests per windowMs
+  message: { error: "Too many requests, please try again later." }
+});
+
+// Auth middleware for AI endpoint
+const requireApiKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey || apiKey !== process.env.OPERATOR_API_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+};
+
 // API routes FIRST
-app.post("/api/analyze-equipment", async (req, res) => {
+app.post("/api/analyze-equipment", aiLimiter, requireApiKey, async (req, res) => {
   try {
     const { imageBase64 } = req.body;
     
@@ -144,4 +161,8 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
