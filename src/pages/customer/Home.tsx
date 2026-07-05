@@ -4,15 +4,134 @@ import { ChevronRight, Search, Calendar } from 'lucide-react';
 import { INITIAL_EQUIPMENT } from '../../mockData';
 
 const CATEGORIES = [
-  { id: 'Excavators', name: 'Excavators', image: '/images/mini_digger_1781357985087.webp' },
-  { id: 'Dumpers', name: 'Dumpers', image: '/images/hi_tip_dumper_1781358015457.webp' },
-  { id: 'Compaction', name: 'Compaction', image: '/images/wacker_plate_1781358033267.webp' },
-  { id: 'Groundcare', name: 'Groundcare', image: '/images/trencher_1781358047416.webp' },
-  { id: 'Access', name: 'Access', image: '/images/scissor_lift_1781358239898.webp' },
-  { id: 'Power & Light', name: 'Power & Light', image: '/images/generator_3kva_1781358330592.webp' },
-  { id: 'Breaking', name: 'Breaking', image: '/images/breaker_110v_1781358344746.webp' },
-  { id: 'Floor Care', name: 'Floor Care', image: '/images/floor_sander_1781358280768.webp' }
+  { 
+    id: 'Excavators', 
+    name: 'Excavators', 
+    label: '1.5t – 8t Excavators',
+    attribute: 'Tonnage: 1.5t - 8.0t',
+    subSizes: 'Micro / 1.5t / 3t / 5t / 8t',
+    image: '/images/mini_digger_1781357985087.webp' 
+  },
+  { 
+    id: 'Dumpers', 
+    name: 'Dumpers', 
+    label: '1t – 9t Site Dumpers',
+    attribute: 'Payload: 1.0t - 9.0t',
+    subSizes: '500kg / 1t / 3t / 6t / 9t',
+    image: '/images/hi_tip_dumper_1781358015457.webp' 
+  },
+  { 
+    id: 'Compaction', 
+    name: 'Compaction', 
+    label: 'Vibrating Plates & Rollers',
+    attribute: 'Width: 350mm - 1200mm',
+    subSizes: '350mm / 500mm / 800mm / 1200mm',
+    image: '/images/wacker_plate_1781358033267.webp' 
+  },
+  { 
+    id: 'Groundcare', 
+    name: 'Groundcare', 
+    label: 'Trenchers & Landscaping',
+    attribute: 'Reach: Up to 600mm depth',
+    subSizes: 'Trencher / Grinder / Rotavator',
+    image: '/images/trencher_1781358047416.webp' 
+  },
+  { 
+    id: 'Access', 
+    name: 'Access', 
+    label: 'Scissor Lifts & Towers',
+    attribute: 'Working Height: 4m - 14m',
+    subSizes: 'Scissor / Boom / Tower / Pop-Up',
+    image: '/images/scissor_lift_1781358239898.webp' 
+  },
+  { 
+    id: 'Power & Light', 
+    name: 'Power & Light', 
+    label: '3kVA – 10kVA Generators',
+    attribute: 'Rating: 3kVA - 10kVA',
+    subSizes: '3kVA / 6kVA / 10kVA Silenced',
+    image: '/images/generator_3kva_1781358330592.webp' 
+  },
+  { 
+    id: 'Breaking', 
+    name: 'Breaking', 
+    label: 'Heavy Breakers & Saws',
+    attribute: 'Power: 110V site electric',
+    subSizes: 'Medium / Heavy / Hydraulic / Saw',
+    image: '/images/breaker_110v_1781358344746.webp' 
+  },
+  { 
+    id: 'Floor Care', 
+    name: 'Floor Care', 
+    label: 'Floor Sanders & Cleaners',
+    attribute: 'Power: 240V / 110V clean-care',
+    subSizes: 'Sander / Edger / Carpet Cleaner / Vac',
+    image: '/images/floor_sander_1781358280768.webp' 
+  }
 ];
+
+function getConfidenceSignal(name: string): string {
+  const signalMap: Record<string, string> = {
+    // Excavators
+    '1.5 Tonne Mini Digger': 'Fits through 1m garden gate',
+    '3 Tonne Digger': 'Most hired for foundations & extensions',
+    'Micro Digger (750mm)': 'Fits through standard 760mm doorway',
+    '5 Tonne Tracked Excavator': 'Zero tail swing for tight wall clearance',
+    '8 Tonne Tracked Excavator': 'Heavy clearing & bulk site excavation',
+    'Electric Mini Digger 1.9T': 'Zero-emission indoor safe operation',
+    // Dumpers
+    '1 Tonne Hi-Tip Dumper': 'High tip fits standard builders skips',
+    '3 Tonne Front Tip Dumper': '4WD terrain utility for heavy muck shift',
+    '6 Tonne Swivel Skip Dumper': 'Swivels 180° for precision trench backfill',
+    '9 Tonne Front Tip Dumper': 'Bulk site muck shift specialist',
+    'Tracked Micro Dumper 500kg': 'Fits through narrow 750mm garden gate',
+    'Tracked Dumper 1 Tonne': 'Low ground pressure, mud safe tracks',
+    // Compaction
+    'Wacker Plate (350mm)': 'Fits narrow patio brickwork prep',
+    'Trench Rammer': 'Most hired for deep trench pipe base compaction',
+    'Forward/Reverge Plate (500mm)': 'Ideal for deep sub-base compaction',
+    'Twin Drum Ride-On Roller 800mm': 'Ideal for tarmac driveways & pathways',
+    'Twin Drum Ride-On Roller 1200mm': 'Road repairs & carpark grading',
+    'Single Drum Pedestrian Roller': 'Excellent path compaction edge finish',
+    // Groundcare
+    'Trencher Walk-Behind': 'Fast clean cable and water pipe cuts',
+    'Stump Grinder': 'Removes heavy stumps below soil level',
+    'Wood Chipper 6 Inch': 'Tows behind standard 50mm ball vehicle hitch',
+    'Pogt Hole Borer Petrol': 'Dual-operator high safety clutch protection',
+    'Rotavator Heavy Duty': 'Fast soil turn for turfing prep',
+    'Turf Cutter': 'Lifts lawn turf clean in neat rolls',
+    // Access
+    'Scissor Lift 19ft': 'Non-marking tyres for clean indoor floors',
+    'Alloy Tower Scaffold 4m': 'Lightweight, clicks without tools',
+    'Scissor Lift 26ft (Electric)': 'High-bay indoor warehouse access',
+    'Scissor Lift 32ft (Diesel)': '4WD rough terrain outriggers included',
+    'Articulating Boom Lift 45ft': 'Up-and-over outreach design',
+    'Pop-Up Push Around Lift': 'Fits in standard passenger elevator',
+    // Power & Light
+    'Generator 3kVA': 'Runs circular saws & site lights',
+    'Generator 6kVA': 'Runs multiple heavy site power tools',
+    'Generator 10kVA Silenced': 'Ultra-quiet canopy for residential areas',
+    'Portable Lighting Tower (LED)': 'Auto-mast extends to 5m height',
+    '110V Transformer 3.3kVA': 'Required step-down for 110V site tools',
+    'Portable Battery Generator 2kW': 'Silent clean battery indoor power',
+    // Breaking
+    'Breaker Heavy Duty 110V': 'Shatters concrete slabs up to 100mm',
+    'Medium Duty Breaker 110V': 'Ideal for tile removal & plaster render',
+    'Hydraulic Breaker Power Pack': 'High power independent engine gun',
+    'Petrol Cut-Off Saw 12"': 'Clean brick & masonry cutting',
+    'Concrete Floor Planer': 'Scarifies and levels uneven concrete',
+    'SDS Max Combi Hammer 110V': 'Heavy brick drilling & light chipping',
+    // Floor Care
+    'Floor Sander 240V': 'Includes dust bag collection hood',
+    'Carpet Cleaner': 'Deep fabric upholstery suction spray',
+    'Floor Edging Sander': 'Gets flush against skirting boards',
+    'Industrial Vacuum Cleaner': 'Wet/dry dual-capacity motor',
+    'Floor Polisher / Scrubber': 'Brings tiles & wood to high shine',
+    'Tile Stripper': 'Peels carpet tiles and vinyl clean'
+  };
+
+  return signalMap[name] || 'Excellent site reliability, checked & cleaned';
+}
 
 export default function CustomerHome() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,14 +211,14 @@ export default function CustomerHome() {
         </div>
       </div>
 
-      {/* Categories Grid - Responsive: 2 cols on mobile, up to 4 on desktop */}
-      <div className="w-full px-5 py-8 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-black text-slate-800">Browse Categories</h2>
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">8 Types</span>
+      {/* Categories Grid - Denser, High-Contrast & Fast to Scan */}
+      <div className="w-full px-5 py-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-tight border-l-4 border-indigo-600 pl-2">Categories</h2>
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">8 Types</span>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 auto-rows-fr">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {CATEGORIES.map((category) => (
             <a 
               key={category.id} 
@@ -108,14 +227,14 @@ export default function CustomerHome() {
                 e.preventDefault();
                 document.getElementById(category.id)?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="group relative flex flex-col rounded-2xl overflow-hidden aspect-square bg-slate-200 shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer"
+              className="group relative flex flex-col rounded-xl overflow-hidden h-26 sm:h-28 bg-slate-200 border border-slate-300 hover:border-indigo-600 transition-all cursor-pointer select-none"
             >
               {/* Background Image */}
               <div className="absolute inset-0 w-full h-full">
                 <img 
                   src={category.image} 
-                  alt={category.name} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                  alt={category.label} 
+                  className="w-full h-full object-cover brightness-[0.55] group-hover:scale-102 transition-transform duration-300" 
                   onError={(e) => {
                     e.currentTarget.onerror = null;
                     e.currentTarget.src = '/images/mini_digger_1781357985087.webp';
@@ -123,16 +242,29 @@ export default function CustomerHome() {
                 />
               </div>
               
-              {/* Dark Gradient Overlay for readability */}
-              <div className="absolute inset-x-0 bottom-0 top-1/3 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+              {/* Strong High Contrast Dark Overlay */}
+              <div className="absolute inset-0 bg-black/35 group-hover:bg-black/45 transition-colors duration-300"></div>
 
-              {/* Label & Icon */}
-              <div className="absolute bottom-0 inset-x-0 p-3 sm:p-4 flex flex-col items-start gap-1">
-                <span className="text-white font-bold leading-tight drop-shadow-sm text-sm sm:text-base md:text-lg">
-                  {category.name}
-                </span>
-                <div className="mt-1 bg-white/20 backdrop-blur-sm rounded-full p-1 group-hover:bg-indigo-600 transition-colors duration-300">
-                  <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+              {/* Label & Spec block */}
+              <div className="absolute inset-0 p-2.5 flex flex-col justify-between z-20">
+                {/* Title & Available Sub-sizes */}
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-white font-extrabold leading-tight text-xs sm:text-sm tracking-tight drop-shadow">
+                    {category.label}
+                  </span>
+                  <span className="text-[9px] sm:text-[10px] text-slate-300 font-bold leading-normal tracking-wide truncate">
+                    {category.subSizes}
+                  </span>
+                </div>
+                
+                {/* Key Spec attribute & Arrow */}
+                <div className="w-full flex items-end justify-between gap-1 mt-auto">
+                  <span className="text-[10px] sm:text-xs text-indigo-300 font-extrabold tracking-wide uppercase truncate drop-shadow-sm">
+                    {category.attribute}
+                  </span>
+                  <div className="bg-indigo-600/90 text-white rounded p-0.5 group-hover:bg-indigo-500 shrink-0 transition-colors">
+                    <ChevronRight className="w-3 h-3 text-white" />
+                  </div>
                 </div>
               </div>
             </a>
@@ -179,11 +311,16 @@ export default function CustomerHome() {
                     
                     <div className="p-5 flex-1 flex flex-col">
                       <h4 className="mb-2 text-lg font-bold text-slate-900 leading-tight">{item.name}</h4>
-                      <div className="mb-4 flex-1 space-y-2 text-sm text-slate-600">
-                        <p>{item.job_fit}</p>
-                        <p className="font-mono inline-block px-2 py-1 rounded bg-slate-100 text-slate-700 text-xs font-semibold">
-                          Width: {item.access_width_mm}mm
-                        </p>
+                      <div className="mb-4 flex-1 space-y-2 text-sm text-slate-600 flex flex-col items-start">
+                        <p className="line-clamp-2">{item.job_fit}</p>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          <span className="font-mono inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-semibold">
+                            Width: {item.access_width_mm}mm
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100 shrink-0">
+                            🛡️ {getConfidenceSignal(item.name)}
+                          </span>
+                        </div>
                       </div>
                       
                       <div className="flex items-end justify-between mt-auto pt-4 border-t border-slate-100">

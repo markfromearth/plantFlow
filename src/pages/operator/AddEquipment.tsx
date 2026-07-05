@@ -2,14 +2,76 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { Equipment } from '../../types';
-import { ArrowLeft, Save, Camera, Loader2, Upload } from 'lucide-react';
+import { ArrowLeft, Save, Camera, Loader2, Upload, Trash2, Plus, Sparkles, FolderPlus } from 'lucide-react';
 import { useOAuthToken } from '../../hooks/useOAuthToken';
+
+interface PendingBatchItem {
+  id: string;
+  file: File;
+  rawPreviewUrl: string;
+  compressedBase64: string;
+  status: 'pending' | 'uploading' | 'analyzing' | 'completed' | 'error';
+  error?: string;
+  formData: {
+    machine_id: string;
+    name: string;
+    category: string;
+    job_fit: string;
+    access_width_mm: string;
+    day_rate: string;
+    delivery_rate: string;
+    availability_status: string;
+    compliance_expiry: string;
+    image_url: string;
+    notes: string;
+  };
+}
+
+function compressImageClient(base64Str: string, maxWidth = 1024, maxHeight = 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas context not available'));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+      resolve(compressedBase64);
+    };
+    img.onerror = (err) => reject(err);
+  });
+}
 
 export default function OperatorAddEquipment() {
   const navigate = useNavigate();
   const { addEquipment } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const batchInputRef = useRef<HTMLInputElement>(null);
 
+  const [activeTab, setActiveTab] = useState<'single' | 'batch'>('single');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -24,13 +86,15 @@ export default function OperatorAddEquipment() {
     category: 'Excavators',
     job_fit: '',
     access_width_mm: '',
-    day_rate: '',
-    delivery_rate: '',
+    day_rate: '75',
+    delivery_rate: '30',
     availability_status: 'available',
-    compliance_expiry: '',
-image_url: '/images/default.jpg',
+    compliance_expiry: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
+    image_url: '/images/default.jpg',
     notes: ''
   });
+
+  const [batchItems, setBatchItems] = useState<PendingBatchItem[]>([]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -46,15 +110,15 @@ image_url: '/images/default.jpg',
     setSuccessMsg('');
 
     try {
-      // Read file as Base64
       const reader = new FileReader();
-      const base64Data = await new Promise<string>((resolve, reject) => {
+      const rawBase64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
 
-      // 1. Upload the image to Vercel Blob storage first
+      const base64Data = await compressImageClient(rawBase64);
+
       const uploadRes = await fetch('/api/upload', {
         method: 'POST',
         headers: {
@@ -64,18 +128,10 @@ image_url: '/images/default.jpg',
         body: JSON.stringify({ imageBase64: base64Data, filename: file.name }),
       });
 
-      if (!uploadRes.ok) {
-        const uploadErr = await uploadRes.json();
-        throw new Error(uploadErr.error || 'Failed to upload image to storage');
-      }
-
+      if (!uploadRes.ok) throw new Error('Failed to upload image');
       const uploadData = await uploadRes.json();
-      const blobUrl = uploadData.url;
+      setFormData(prev => ({ ...prev, image_url: uploadData.url }));
 
-      // Update form data to show the image locally and set public CDN URL for saving
-      setFormData(prev => ({ ...prev, image_url: blobUrl }));
-
-      // 2. Send to AI for analysis (with API key check)
       const res = await fetch('/api/analyze-equipment', {
         method: 'POST',
         headers: {
@@ -85,100 +141,138 @@ image_url: '/images/default.jpg',
         body: JSON.stringify({ imageBase64: base64Data }),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to analyze image');
-      }
-
+      if (!res.ok) throw new Error('Failed to analyze image');
       const data = await res.json();
       
       if (data.confidence >= 0.4) {
-        setFormData(prev => ({
-          ...prev,
-          access_width_mm: data.access_width_mm?.toString() || prev.access_width_mm,
-        }));
-        setSuccessMsg(`Access width estimated at ${data.access_width_mm}mm. ${data.reasoning || ''}`);
+        setFormData(prev => ({ ...prev, access_width_mm: data.access_width_mm?.toString() || prev.access_width_mm }));
+        setSuccessMsg(`Access width estimated at ${data.access_width_mm}mm.`);
       } else {
-        setErrorMsg(`We couldn't confidently identify the access width (${Math.round((data.confidence || 0) * 100)}% confidence). Please manually enter details. ${data.reasoning || ''}`);
+        setErrorMsg('Confidence low. Manual entry required.');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error processing image');
     } finally {
       setIsLoading(false);
-      // reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleBatchImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const fileList = Array.from(files);
+    for (const file of fileList) {
+      const itemId = Math.random().toString(36).substring(2, 9);
+      const rawPreviewUrl = URL.createObjectURL(file);
+      
+      const newBatchItem: PendingBatchItem = {
+        id: itemId,
+        file,
+        rawPreviewUrl,
+        compressedBase64: '',
+        status: 'pending',
+        formData: {
+          machine_id: 'AUTOGEN-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
+          name: file.name.split('.')[0].replace(/[-_]/g, ' '),
+          category: 'Excavators',
+          job_fit: 'Identified from batch upload.',
+          access_width_mm: '',
+          day_rate: '75',
+          delivery_rate: '30',
+          availability_status: 'available',
+          compliance_expiry: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
+          image_url: '/images/default.jpg',
+          notes: 'Batch ingested item.'
+        }
+      };
+
+      setBatchItems(prev => [...prev, newBatchItem]);
+      processBatchFile(newBatchItem);
+    }
+    if (batchInputRef.current) batchInputRef.current.value = '';
+  };
+
+  const processBatchFile = async (item: PendingBatchItem) => {
+    try {
+      setBatchItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'uploading' } : i));
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(item.file);
+      });
+      const compressedBase64 = await compressImageClient(base64Data);
+
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': import.meta.env.VITE_OPERATOR_API_KEY || 'my_secret_operator_api_key' },
+        body: JSON.stringify({ imageBase64: compressedBase64, filename: item.file.name }),
+      });
+      if (!uploadRes.ok) throw new Error('Storage upload failed');
+      const uploadData = await uploadRes.json();
+
+      setBatchItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'analyzing', formData: { ...i.formData, image_url: uploadData.url } } : i));
+
+      const aiRes = await fetch('/api/analyze-equipment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': import.meta.env.VITE_OPERATOR_API_KEY || 'my_secret_operator_api_key' },
+        body: JSON.stringify({ imageBase64: compressedBase64 }),
+      });
+
+      let name = item.formData.name;
+      let category = 'Excavators';
+      let accessWidth = '';
+      let notes = 'Auto-ingested.';
+
+      if (aiRes.ok) {
+        const aiData = await aiRes.json();
+        if (aiData.confidence >= 0.4) {
+          category = aiData.category || 'Excavators';
+          accessWidth = aiData.access_width_mm?.toString() || '';
+          notes = aiData.reasoning || '';
+          name = accessWidth ? `${category === 'Excavators' ? 'Mini Digger' : category.slice(0, -1)} (${accessWidth}mm)` : name;
+        }
+      }
+
+      setBatchItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'completed', formData: { ...i.formData, name, category, access_width_mm: accessWidth, notes } } : i));
+    } catch (err: any) {
+      setBatchItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'error', error: err.message } : i));
+    }
+  };
+
+  const handleBatchItemChange = (id: string, name: string, value: string) => {
+    setBatchItems(prev => prev.map(item => item.id === id ? { ...item, formData: { ...item.formData, [name]: value } } : item));
+  };
+
+  const removeBatchItem = (id: string) => {
+    setBatchItems(prev => prev.filter(item => item.id !== id));
   };
 
   const writeToSheets = async (accessToken: string, eq: Equipment) => {
     let spreadsheetId = localStorage.getItem('plantflow_os_spreadsheet_id');
-    
     if (!spreadsheetId) {
-      // Create new spreadsheet
       const createRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          properties: { title: 'PlantFlow OS Inventory' },
-          sheets: [{ properties: { title: 'Inventory' } }]
-        })
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: { title: 'PlantFlow OS Inventory' }, sheets: [{ properties: { title: 'Inventory' } }] })
       });
-      
-      if (!createRes.ok) {
-         throw new Error('Failed to create spreadsheet');
-      }
+      if (!createRes.ok) throw new Error('Failed to create spreadsheet');
       const createData = await createRes.json();
       spreadsheetId = createData.spreadsheetId;
       localStorage.setItem('plantflow_os_spreadsheet_id', spreadsheetId as string);
-
-      // Add headers
-      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Inventory!A1:J1:append?valueInputOption=USER_ENTERED`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          values: [
-            ['Machine ID', 'Name', 'Category', 'Job Fit', 'Access Width (mm)', 'Day Rate', 'Delivery Rate', 'Status', 'Compliance Expiry', 'Notes']
-          ]
-        })
-      });
     }
 
-    // Append row
     const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Inventory!A:J:append?valueInputOption=USER_ENTERED`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        values: [
-          [
-            eq.machine_id,
-            eq.name,
-            eq.category,
-            eq.job_fit,
-            eq.access_width_mm || '',
-            eq.day_rate || '',
-            eq.delivery_rate || '',
-            eq.availability_status || '',
-            eq.compliance_expiry || '',
-            eq.notes || ''
-          ]
-        ]
-      })
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [[eq.machine_id, eq.name, eq.category, eq.job_fit, eq.access_width_mm, eq.day_rate, eq.delivery_rate, eq.availability_status, eq.compliance_expiry, eq.notes]] })
     });
-    
-    if (!appendRes.ok) {
-        throw new Error('Failed to append row');
-    }
+    if (!appendRes.ok) throw new Error('Failed to append row');
   };
 
   useEffect(() => {
@@ -191,14 +285,12 @@ image_url: '/images/default.jpg',
        }).catch(err => {
           setErrorMsg('Failed to write to Google Sheets: ' + err.message);
           setIsSubmitting(false);
-          setPendingEquipment(null);
        });
     }
   }, [token, pendingEquipment, isSubmitting]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     const newEquipment: Equipment = {
         ...formData,
         access_width_mm: Number(formData.access_width_mm),
@@ -206,15 +298,12 @@ image_url: '/images/default.jpg',
         delivery_rate: Number(formData.delivery_rate),
         availability_status: formData.availability_status as any,
     };
-
     if (!token) {
         setPendingEquipment(newEquipment);
         setIsSubmitting(true);
         requestToken();
         return;
     }
-
-    // if token already exists
     setIsSubmitting(true);
     writeToSheets(token, newEquipment).then(() => {
         setIsSubmitting(false);
@@ -226,213 +315,125 @@ image_url: '/images/default.jpg',
     });
   };
 
+  const handleBatchSubmit = async () => {
+    const completed = batchItems.filter(item => item.status === 'completed');
+    if (completed.length === 0) return;
+    setIsSubmitting(true);
+    setErrorMsg('');
+    try {
+      const itemsToSave: Equipment[] = completed.map(item => ({
+        machine_id: item.formData.machine_id,
+        name: item.formData.name,
+        category: item.formData.category,
+        job_fit: item.formData.job_fit,
+        access_width_mm: Number(item.formData.access_width_mm) || 1000,
+        day_rate: Number(item.formData.day_rate) || 75,
+        delivery_rate: Number(item.formData.delivery_rate) || 30,
+        availability_status: item.formData.availability_status as any,
+        compliance_expiry: item.formData.compliance_expiry,
+        image_url: item.formData.image_url,
+        notes: item.formData.notes
+      }));
+      if (token) {
+        for (const eq of itemsToSave) await writeToSheets(token, eq);
+      }
+      for (const eq of itemsToSave) await addEquipment(eq);
+      setSuccessMsg(`Successfully saved ${itemsToSave.length} items!`);
+      setTimeout(() => navigate('/operator/fleet'), 1500);
+    } catch (err: any) {
+      setErrorMsg('Failed to save batch: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-24">
-      <div className="flex items-center gap-3 mb-6">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-2 -ml-2 rounded-full hover:bg-slate-200 text-slate-700 transition-colors"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Add Equipment</h1>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-slate-200 text-slate-700 transition-colors"><ArrowLeft className="w-6 h-6" /></button>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Fleet Intake</h1>
+        </div>
+        <div className="bg-slate-100 p-1 rounded-xl flex gap-1 border border-slate-200">
+          <button onClick={() => setActiveTab('single')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'single' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Single Form</button>
+          <button onClick={() => setActiveTab('batch')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'batch' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Batch Ingest</button>
+        </div>
       </div>
 
-      {/* AI Scanner Header */}
-      <div className="bg-indigo-600 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
-        <div className="relative z-10 flex flex-col items-center text-center space-y-4">
-          <div className="bg-white/20 p-4 rounded-full mx-auto backdrop-blur-sm">
-            <Camera className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold mb-1">AI Machine Identifier</h2>
-            <p className="text-indigo-100 text-sm">Take a photo and we'll auto-fill the details based on our visual database.</p>
-          </div>
-          
-          <input 
-            type="file" 
-            accept="image/*" 
-            capture="environment" 
-            className="hidden" 
-            ref={fileInputRef}
-            onChange={handleImageCapture}
-          />
-          
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="bg-white text-indigo-700 font-bold px-6 py-3 rounded-xl hover:bg-indigo-50 transition-colors active:scale-95 flex items-center gap-2"
-          >
-            {isLoading ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Analyzing Photo...</>
-            ) : (
-              <><Upload className="w-5 h-5" /> Upload Photo</>
-            )}
-          </button>
-          
-          {errorMsg && <div className="text-red-200 text-sm bg-red-900/40 px-3 py-2 rounded-lg">{errorMsg}</div>}
-          {successMsg && <div className="text-emerald-300 text-sm font-medium bg-emerald-900/40 px-3 py-2 rounded-lg">{successMsg}</div>}
-        </div>
-        
-        {/* Decorative background vectors */}
-        <svg className="absolute -bottom-10 -right-10 w-48 h-48 text-indigo-500 opacity-50" viewBox="0 0 100 100" fill="currentColor">
-          <circle cx="50" cy="50" r="50"></circle>
-        </svg>
-      </div>
-
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4 relative">
-        <div className="flex justify-center mb-6">
-           <img 
-              src={formData.image_url} 
-              alt="Equipment preview" 
-              className="w-32 h-32 object-cover rounded-2xl shadow-sm border-4 border-white ring-1 ring-slate-100"
-           />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-bold text-slate-700 mb-1">Machine ID</label>
-          <input 
-            required
-            type="text" 
-            name="machine_id"
-            value={formData.machine_id}
-            onChange={handleChange}
-            placeholder="e.g. EX-099"
-            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-bold text-slate-700 mb-1">Name</label>
-          <input 
-            required
-            type="text" 
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="e.g. 1.5 Tonne Digger"
-            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-bold text-slate-700 mb-1">Category</label>
-          <select 
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-          >
-            <option value="Excavators">Excavators</option>
-            <option value="Dumpers">Dumpers</option>
-            <option value="Compaction">Compaction</option>
-            <option value="Groundcare">Groundcare</option>
-            <option value="Access">Access</option>
-            <option value="Power & Light">Power & Light</option>
-            <option value="Breaking">Breaking</option>
-            <option value="Floor Care">Floor Care</option>
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">Day Rate (£)</label>
-            <input 
-              required
-              type="number" 
-              name="day_rate"
-              value={formData.day_rate}
-              onChange={handleChange}
-              className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">Delivery Rate (£)</label>
-            <input 
-              required
-              type="number" 
-              name="delivery_rate"
-              value={formData.delivery_rate}
-              onChange={handleChange}
-              className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-bold text-slate-700 mb-1">Access Width (mm)</label>
-          <input 
-            required
-            type="number" 
-            name="access_width_mm"
-            value={formData.access_width_mm}
-            onChange={handleChange}
-            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div>
-           <label className="block text-sm font-bold text-slate-700 mb-1">Compliance Expiry</label>
-           <input 
-             required
-             type="date" 
-             name="compliance_expiry"
-             value={formData.compliance_expiry}
-             onChange={handleChange}
-             className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-           />
-        </div>
-
-        <div>
-          <label className="block text-sm font-bold text-slate-700 mb-1">Job Fit (Description)</label>
-          <input 
-            required
-            type="text" 
-            name="job_fit"
-            value={formData.job_fit}
-            onChange={handleChange}
-            placeholder="e.g. Driveways, landscaping"
-            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-bold text-slate-700 mb-1">Notes</label>
-          <textarea 
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[80px]"
-          />
-        </div>
-
-        <div className="relative">
-          <button 
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 mt-6 active:scale-95 z-20 relative disabled:opacity-75"
-          >
-            {isSubmitting ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Saving & Exporting...</>
-            ) : (
-              <><Save className="w-5 h-5" /> Save Equipment</>
-            )}
-          </button>
-          
-          {/* Hint */}
-          <div className="absolute top-0 -right-4 text-slate-800 pointer-events-none hidden sm:flex flex-col items-end z-10" style={{ fontFamily: '"Caveat", cursive', fontSize: '1.4rem', lineHeight: '1.1' }}>
-            <svg width="60" height="60" viewBox="0 0 100 100" className="absolute -top-12 right-12 text-slate-800 overflow-visible transform rotate-12">
-              <path d="M40,90 Q50,40 20,20" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              <path d="M15,45 L20,20 L45,25" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <div className="-rotate-6 pt-2 pr-6 text-right w-48">
-              <p>Hit save to add</p>
-              <p>to inventory!</p>
+      {activeTab === 'single' ? (
+        <>
+          <div className="bg-indigo-600 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
+            <div className="relative z-10 flex flex-col items-center text-center space-y-4">
+              <div className="bg-white/20 p-4 rounded-full mx-auto backdrop-blur-sm"><Camera className="w-8 h-8 text-white" /></div>
+              <div>
+                <h2 className="text-xl font-bold mb-1">AI Machine Identifier</h2>
+                <p className="text-indigo-100 text-sm">Take a photo and we'll auto-fill the details.</p>
+              </div>
+              <input type="file" accept="image/*" capture="environment" className="hidden" ref={fileInputRef} onChange={handleImageCapture} />
+              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="bg-white text-indigo-700 font-bold px-6 py-3 rounded-xl hover:bg-indigo-50 transition-colors active:scale-95 flex items-center gap-2">
+                {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Analyzing...</> : <><Upload className="w-5 h-5" /> Upload Photo</>}
+              </button>
+              {errorMsg && <div className="text-red-200 text-sm bg-red-900/40 px-3 py-2 rounded-lg">{errorMsg}</div>}
+              {successMsg && <div className="text-emerald-300 text-sm font-medium bg-emerald-900/40 px-3 py-2 rounded-lg">{successMsg}</div>}
             </div>
           </div>
+          <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+            <div className="flex justify-center mb-6"><img src={formData.image_url} alt="Equipment" className="w-32 h-32 object-cover rounded-2xl shadow-sm border-4 border-white" /></div>
+            <div><label className="block text-sm font-bold text-slate-700 mb-1">Machine ID</label><input required type="text" name="machine_id" value={formData.machine_id} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
+            <div><label className="block text-sm font-bold text-slate-700 mb-1">Name</label><input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
+            <div><label className="block text-sm font-bold text-slate-700 mb-1">Category</label><select name="category" value={formData.category} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 bg-white"><option value="Excavators">Excavators</option><option value="Dumpers">Dumpers</option><option value="Compaction">Compaction</option><option value="Access">Access</option></select></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className="block text-sm font-bold text-slate-700 mb-1">Day Rate (£)</label><input required type="number" name="day_rate" value={formData.day_rate} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
+              <div><label className="block text-sm font-bold text-slate-700 mb-1">Delivery Rate (£)</label><input required type="number" name="delivery_rate" value={formData.delivery_rate} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
+            </div>
+            <div><label className="block text-sm font-bold text-slate-700 mb-1">Access Width (mm)</label><input required type="number" name="access_width_mm" value={formData.access_width_mm} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
+            <div><label className="block text-sm font-bold text-slate-700 mb-1">Compliance Expiry</label><input required type="date" name="compliance_expiry" value={formData.compliance_expiry} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
+            <button type="submit" disabled={isSubmitting} className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl mt-6">{isSubmitting ? 'Saving...' : 'Save Equipment'}</button>
+          </form>
+        </>
+      ) : (
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center text-white">
+            <div className="relative z-10 space-y-4 max-w-md mx-auto">
+              <FolderPlus className="w-12 h-12 text-indigo-400 mx-auto" />
+              <h3 className="text-xl font-bold">Batch Intake Console</h3>
+              <input type="file" ref={batchInputRef} onChange={handleBatchImageUpload} accept="image/*" multiple className="hidden" />
+              <button type="button" onClick={() => batchInputRef.current?.click()} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold">Select Photos</button>
+            </div>
+          </div>
+          {batchItems.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-md font-bold text-slate-800">Batch Queue ({batchItems.filter(i => i.status === 'completed').length} / {batchItems.length})</h3>
+                <button onClick={() => setBatchItems([])} className="text-xs text-slate-400">Clear</button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {batchItems.map((item) => (
+                  <div key={item.id} className="bg-white border border-slate-200 rounded-2xl p-4">
+                    <div className="flex gap-4">
+                      <div className="w-20 h-20 bg-slate-100 rounded-lg overflow-hidden relative">
+                        <img src={item.status === 'completed' ? item.formData.image_url : item.rawPreviewUrl} className="w-full h-full object-cover" alt="" />
+                        {item.status !== 'completed' && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><Loader2 className="w-5 h-5 text-white animate-spin" /></div>}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-bold">{item.formData.name}</h4>
+                        {item.status === 'completed' && <div className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1"><Sparkles className="w-3 h-3" /> Auto-tagged</div>}
+                      </div>
+                    </div>
+                    {item.status === 'completed' && (
+                      <div className="grid grid-cols-2 gap-2 mt-4 text-xs pt-3 border-t border-slate-100">
+                        <input type="text" value={item.formData.machine_id} onChange={(e) => handleBatchItemChange(item.id, 'machine_id', e.target.value)} className="border p-1 rounded" />
+                        <input type="text" value={item.formData.name} onChange={(e) => handleBatchItemChange(item.id, 'name', e.target.value)} className="border p-1 rounded" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button onClick={handleBatchSubmit} disabled={isSubmitting} className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl">{isSubmitting ? 'Processing...' : 'Ingest All Items'}</button>
+            </div>
+          )}
         </div>
-      </form>
+      )}
     </div>
   );
 }
