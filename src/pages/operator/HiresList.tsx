@@ -4,8 +4,10 @@ import { useStore } from '../../store';
 import { ChevronRight, Search, Calendar, Package, ArrowUpRight, ArrowDownLeft, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { Booking } from '../../types';
 import { useOAuthToken } from '../../hooks/useOAuthToken';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 export default function HiresList() {
+  useDocumentTitle("Hires Management");
   const navigate = useNavigate();
   const { bookings, equipment } = useStore();
   const [filter, setFilter] = useState<'all' | 'pending' | 'active'>('all');
@@ -160,6 +162,11 @@ export default function HiresList() {
                     <p className="text-slate-500 text-sm font-medium">{b.hirer_name}</p>
                     <p className="text-slate-400 text-xs mt-0.5 border-t border-slate-100 pt-1 border-dashed">
                       {b.status === 'active' ? 'Collection' : 'Delivery'}: {b.delivery_window || 'Anytime'}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-semibold mt-1">
+                      {b.status === 'pending' && "Pending: Booking requires operator confirmation."}
+                      {b.status === 'confirmed' && "Ready: Confirmed booking, waiting to go on hire."}
+                      {b.status === 'active' && "Active: Equipment is currently out on hire."}
                     </p>
                   </div>
                 </div>

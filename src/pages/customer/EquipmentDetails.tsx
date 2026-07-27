@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { ArrowLeft, Check, Calendar, Truck, ArrowRight } from 'lucide-react';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 export default function CustomerEquipmentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -9,10 +10,11 @@ export default function CustomerEquipmentDetails() {
   const { equipment, addBooking } = useStore();
   
   const item = equipment.find(e => e.machine_id === id);
+  useDocumentTitle(item ? `${item.name} Details` : "Equipment Details");
   
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [deliveryWindow, setDeliveryWindow] = useState('Anytime');
+  const [deliveryWindow, setDeliveryWindow] = useState('Morning Assignment (08:00 - 12:00)');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -55,12 +57,12 @@ export default function CustomerEquipmentDetails() {
     if (!startDate || !endDate || !name || !phone) return;
     
     if (startDate < todayStr) {
-      alert("Start date cannot be in the past.");
+      setError("Start date cannot be in the past.");
       return;
     }
     
     if (endDate < startDate) {
-      alert("End date must be on or after the start date.");
+      setError("End date must be on or after the start date.");
       return;
     }
 
@@ -70,7 +72,7 @@ export default function CustomerEquipmentDetails() {
       hirer_name: name,
       hirer_phone: phone,
       hirer_email: email,
-      site_address: deliveryNeeded ? address : 'Collection',
+      site_address: deliveryNeeded ? address : 'Depot Collection',
       start_date: startDate,
       end_date: endDate,
       delivery_window: deliveryWindow,
@@ -157,38 +159,46 @@ export default function CustomerEquipmentDetails() {
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+                  <label htmlFor="booking-start-date" className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
                   <input 
+                    id="booking-start-date"
                     type="date" 
                     required
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setError(null);
+                    }}
                     min={todayStr}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none transition-shadow"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+                  <label htmlFor="booking-end-date" className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
                   <input 
+                    id="booking-end-date"
                     type="date" 
                     required
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setError(null);
+                    }}
                     min={startDate || todayStr}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none transition-shadow"
                   />
                 </div>
               </div>
               <div className="mt-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Delivery Time Preference</label>
+                <label htmlFor="booking-delivery-window" className="block text-sm font-medium text-slate-700 mb-1">Delivery Time Preference</label>
                 <select 
+                  id="booking-delivery-window"
                   value={deliveryWindow} 
                   onChange={(e) => setDeliveryWindow(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none transition-shadow bg-white"
                 >
-                  <option value="Anytime">Anytime</option>
-                  <option value="AM (07:00 - 12:00)">AM (07:00 - 12:00)</option>
-                  <option value="PM (12:00 - 17:00)">PM (12:00 - 17:00)</option>
+                  <option value="Morning Assignment (08:00 - 12:00)">Morning Assignment (08:00 - 12:00)</option>
+                  <option value="Afternoon Assignment (12:00 - 19:00)">Afternoon Assignment (12:00 - 19:00)</option>
                 </select>
               </div>
             </div>
@@ -199,51 +209,92 @@ export default function CustomerEquipmentDetails() {
                 Your Details
               </h4>
               <div className="space-y-3">
+                <label htmlFor="booking-name" className="sr-only">Full Name</label>
                 <input 
+                  id="booking-name"
                   type="text" placeholder="Full Name" required
+                  autoComplete="name"
                   value={name} onChange={e => setName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none transition-shadow"
                 />
                 <div className="grid grid-cols-2 gap-3">
-                  <input 
-                    type="tel" placeholder="Phone" required
-                    value={phone} onChange={e => setPhone(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
-                  />
-                  <input 
-                    type="email" placeholder="Email (optional)"
-                    value={email} onChange={e => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
-                  />
+                  <div>
+                    <label htmlFor="booking-phone" className="sr-only">Phone Number</label>
+                    <input 
+                      id="booking-phone"
+                      type="tel" placeholder="Phone" required
+                      autoComplete="tel"
+                      value={phone} onChange={e => setPhone(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none transition-shadow"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="booking-email" className="sr-only">Email Address</label>
+                    <input 
+                      id="booking-email"
+                      type="email" placeholder="Email (optional)"
+                      autoComplete="email"
+                      value={email} onChange={e => setEmail(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none transition-shadow"
+                    />
+                  </div>
                 </div>
                 
-                <label className="flex items-center gap-3 py-2 cursor-pointer group">
-                  <div className="relative flex items-center">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only" 
-                      checked={deliveryNeeded}
-                      onChange={(e) => setDeliveryNeeded(e.target.checked)}
-                    />
-                    <div className={`w-5 h-5 rounded border ${deliveryNeeded ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'} transition-colors flex items-center justify-center`}>
-                      {deliveryNeeded && <Check className="w-3.5 h-3.5 text-white" />}
-                    </div>
+                {/* Transport Method Selection */}
+                <div className="space-y-2 mt-4">
+                  <span className="block text-sm font-bold text-slate-700">Handover Preference</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      id="handover-depot-btn"
+                      onClick={() => setDeliveryNeeded(false)}
+                      className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none ${
+                        !deliveryNeeded 
+                          ? 'bg-indigo-50 border-indigo-650 text-indigo-750' 
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      🚶 Depot Collection (Free)
+                    </button>
+                    <button
+                      type="button"
+                      id="handover-delivery-btn"
+                      onClick={() => setDeliveryNeeded(true)}
+                      className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none ${
+                        deliveryNeeded 
+                          ? 'bg-indigo-50 border-indigo-650 text-indigo-750' 
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      🚛 Site Delivery (£{(deliveryCost + collectionCost).toFixed(2)})
+                    </button>
                   </div>
-                  <span className="text-sm font-medium text-slate-700 select-none">Require delivery to site</span>
-                </label>
-                
-                {deliveryNeeded && (
-                  <textarea 
-                    placeholder="Delivery Address & Site Instructions" required
-                    value={address} onChange={e => setAddress(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow h-20 resize-none animate-in fade-in slide-in-from-top-2"
-                  />
+                </div>
+
+                {/* Conditional Transport Details */}
+                {!deliveryNeeded ? (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 mt-3 space-y-1.5 animate-in fade-in slide-in-from-top-2">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">DEPOT COLLECTION DETAILS</p>
+                    <p className="text-xs font-bold text-slate-800">Depot Location: Unit 4, Industrial Way, London, SE1 0AA</p>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">Collection Hours: Mon-Fri 08:00 - 17:00, Sat 08:00 - 12:00. Please present your booking confirmation and photo ID upon arrival.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <label htmlFor="booking-address" className="sr-only">Delivery Address & Site Instructions</label>
+                    <textarea 
+                      id="booking-address"
+                      placeholder="Delivery Address & Site Instructions" required
+                      autoComplete="street-address"
+                      value={address} onChange={e => setAddress(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none transition-shadow h-20 resize-none animate-in fade-in slide-in-from-top-2"
+                    />
+                  </div>
                 )}
               </div>
             </div>
 
             {days > 0 && (
-              <div className="pt-4 border-t border-slate-100 space-y-2 text-sm">
+              <div aria-live="polite" aria-atomic="true" className="pt-4 border-t border-slate-100 space-y-2 text-sm">
                 <div className="flex justify-between text-slate-600">
                   <span>Hire ({days} {days === 1 ? 'day' : 'days'})</span>
                   <span>£{hireCost.toFixed(2)}</span>
@@ -283,7 +334,7 @@ export default function CustomerEquipmentDetails() {
             )}
 
             {error && (
-              <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm font-medium animate-in fade-in">
+              <div role="alert" className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm font-medium animate-in fade-in">
                 {error}
               </div>
             )}

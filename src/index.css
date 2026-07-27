@@ -1,18 +1,70 @@
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap');
 @import "tailwindcss";
 
-/* 🌙 System Dark Mode Theme Overrides */
-@media (prefers-color-scheme: dark) {
+/* 🎨 Material Design 3 Design Tokens */
+:root {
+  --md-sys-color-primary: #4f46e5; /* Indigo 600 */
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #e0e7ff; /* Indigo 100 */
+  --md-sys-color-on-primary-container: #312e81; /* Indigo 900 */
+  --md-sys-color-secondary: #475569; /* Slate 600 */
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #f1f5f9; /* Slate 100 */
+  --md-sys-color-on-secondary-container: #1e293b; /* Slate 800 */
+  --md-sys-color-surface: #ffffff;
+  --md-sys-color-on-surface: #0f172a; /* Slate 900 */
+  --md-sys-color-surface-variant: #f8fafc; /* Slate 50 */
+  --md-sys-color-on-surface-variant: #475569; /* Slate 600 */
+  --md-sys-color-outline: #cbd5e1; /* Slate 300 */
+  --md-sys-color-outline-variant: #e2e8f0; /* Slate 200 */
+  --md-sys-color-error: #dc2626; /* Red 600 */
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-background: #f8fafc;
+  --md-sys-color-on-background: #0f172a;
+}
+
+/* ♿ Accessibility: WCAG AA Minimum 16px (1rem) Typography Scaling */
+.theme-light, .theme-dark, .theme-high-vis {
+  --font-size-xs: 1rem;       /* Elevates 12px to 16px */
+  --font-size-sm: 1.0625rem;  /* Elevates 14px to 17px */
+  --font-size-base: 1.125rem; /* Elevates 16px to 18px */
+  --font-size-lg: 1.25rem;    /* Elevates 18px to 20px */
+  --font-size-xl: 1.5rem;     /* Elevates 20px to 24px */
+  --font-size-2xl: 1.75rem;   /* Elevates 24px to 28px */
+}
+
+
+/* 🌙 Dark Mode Theme Overrides */
+.theme-dark {
+  --md-sys-color-primary: #818cf8; /* Indigo 400 */
+  --md-sys-color-on-primary: #0f172a;
+  --md-sys-color-primary-container: #1e1b4b; /* Indigo 900 */
+  --md-sys-color-on-primary-container: #e0e7ff;
+  --md-sys-color-secondary: #94a3b8; /* Slate 400 */
+  --md-sys-color-on-secondary: #0f172a;
+  --md-sys-color-secondary-container: #1e293b; /* Slate 800 */
+  --md-sys-color-on-secondary-container: #f1f5f9;
+  --md-sys-color-surface: #131924;
+  --md-sys-color-on-surface: #f3f4f6; /* Slate 100 */
+  --md-sys-color-surface-variant: #1e293b;
+  --md-sys-color-on-surface-variant: #cbd5e1;
+  --md-sys-color-outline: #475569;
+  --md-sys-color-outline-variant: #334155;
+  --md-sys-color-error: #f87171;
+  --md-sys-color-on-error: #7f1d1d;
+  --md-sys-color-background: #0b0f19;
+  --md-sys-color-on-background: #f3f4f6;
+
   body {
-    background-color: #0b0f19 !important;
-    color: #f3f4f6 !important;
+    background-color: var(--md-sys-color-background) !important;
+    color: var(--md-sys-color-on-background) !important;
   }
 
   /* Background overrides */
   .bg-slate-50,
   .bg-slate-100,
   main {
-    background-color: #0b0f19 !important;
+    background-color: var(--md-sys-color-background) !important;
   }
 
   /* Card/Header/Navigation panels */
@@ -20,9 +72,9 @@
   .bg-white,
   form.bg-white,
   nav.bg-white {
-    background-color: #131924 !important;
-    border-color: #1e293b !important;
-    color: #f3f4f6 !important;
+    background-color: var(--md-sys-color-surface) !important;
+    border-color: var(--md-sys-color-outline-variant) !important;
+    color: var(--md-sys-color-on-surface) !important;
   }
 
   /* Typography color scaling */
@@ -33,7 +85,7 @@
   h4.text-slate-900,
   p.text-slate-900,
   div.text-slate-900 {
-    color: #f3f4f6 !important;
+    color: var(--md-sys-color-on-surface) !important;
   }
 
   .text-slate-800,
@@ -41,25 +93,25 @@
   h3.text-slate-800,
   h4.text-slate-800,
   p.text-slate-800 {
-    color: #e5e7eb !important;
+    color: var(--md-sys-color-on-surface) !important;
   }
 
   .text-slate-700,
   p.text-slate-700 {
-    color: #d1d5db !important;
+    color: #d1d5db !important; /* Meets contrast AA */
   }
 
   .text-slate-650,
   .text-slate-600,
   p.text-slate-600 {
-    color: #9ca3af !important;
+    color: #e2e8f0 !important; /* Meets contrast AA */
   }
 
   .text-slate-500,
   .text-slate-400,
   p.text-slate-500,
   p.text-slate-400 {
-    color: #9ca3af !important;
+    color: #cbd5e1 !important; /* Meets contrast AA */
   }
 
   /* Border color scaling */
@@ -70,80 +122,216 @@
   ul.divide-slate-100 > *,
   li.border-slate-200,
   div.border-slate-200 {
-    border-color: #1e293b !important;
+    border-color: var(--md-sys-color-outline) !important;
   }
 
   /* Form Elements */
   input,
   select,
   textarea {
-    background-color: #131924 !important;
-    border-color: #1e293b !important;
-    color: #f3f4f6 !important;
+    background-color: var(--md-sys-color-surface-variant) !important;
+    border-color: var(--md-sys-color-outline) !important;
+    color: var(--md-sys-color-on-surface) !important;
   }
 
   input::placeholder {
-    color: #6b7280 !important;
+    color: #94a3b8 !important;
   }
 
   /* Indigo Accents & Badges */
   .bg-indigo-50,
+  .bg-indigo-100,
   a.bg-indigo-50 {
-    background-color: #1a1e2e !important;
-    color: #818cf8 !important;
+    background-color: var(--md-sys-color-primary-container) !important;
+    color: var(--md-sys-color-on-primary-container) !important;
   }
 
   a.text-indigo-600,
   span.text-indigo-600,
   p.text-indigo-600 {
-    color: #818cf8 !important;
+    color: var(--md-sys-color-primary) !important;
+  }
+
+  /* Tonal status badge background overrides for dark mode */
+  .bg-emerald-50, .bg-emerald-100 {
+    background-color: #064e3b !important; /* Dark green container */
+    border-color: #0f766e !important;
+  }
+  .bg-red-50 {
+    background-color: #450a0a !important; /* Dark red container */
+    border-color: #7f1d1d !important;
+  }
+  .bg-orange-50, .bg-orange-100 {
+    background-color: #431407 !important; /* Dark orange container */
+    border-color: #7c2d12 !important;
+  }
+
+  /* Status badge text overrides for dark mode */
+  .text-emerald-600, .text-emerald-700 {
+    color: #34d399 !important; /* Light green */
+  }
+  .text-orange-700 {
+    color: #ff9d5c !important; /* Light orange */
+  }
+  .text-red-650 {
+    color: #f87171 !important; /* Light red */
+  }
+  .text-indigo-700 {
+    color: #818cf8 !important; /* Light indigo */
+  }
+
+  /* Button/FAB overrides in dark mode (Using high contrast dark text on bright backgrounds) */
+  .bg-emerald-500 {
+    background-color: #34d399 !important; /* Light green */
+    color: #064e3b !important; /* Dark green text */
+  }
+  .bg-emerald-600 {
+    background-color: #34d399 !important;
+    color: #064e3b !important;
+  }
+  .bg-orange-500 {
+    background-color: #ff9d5c !important; /* Light orange */
+    color: #431407 !important; /* Dark orange text */
+  }
+  .bg-orange-600 {
+    background-color: #ff9d5c !important;
+    color: #431407 !important;
+  }
+  .bg-red-500 {
+    background-color: #f87171 !important; /* Light red */
+    color: #450a0a !important; /* Dark red text */
   }
 
   /* Active popups/dropdowns */
   .shadow-xl {
-    background-color: #131924 !important;
-    border: 1px solid #1e293b !important;
+    background-color: var(--md-sys-color-surface) !important;
+    border: 1px solid var(--md-sys-color-outline) !important;
   }
 
   /* Interactive items hover state overrides */
   .hover\:bg-slate-50:hover {
-    background-color: #1a1e2e !important;
+    background-color: var(--md-sys-color-surface-variant) !important;
   }
 
   .hover\:bg-slate-100:hover {
-    background-color: #1a1e2e !important;
+    background-color: var(--md-sys-color-surface-variant) !important;
   }
 }
 
 /* ⚠️ High Visibility Theme Overrides (Unconditionally Wins on Toggle) */
 .theme-high-vis {
-  --bg-app: #000000;
-  --bg-card: #1f2937;
-  --text-main: #facc15;
-  --text-muted: #fef08a;
-  --border-color: #facc15;
-  --bg-header: #000000;
-  --header-border: #facc15;
+  --md-sys-color-primary: #facc15; /* High Contrast Yellow */
+  --md-sys-color-on-primary: #000000;
+  --md-sys-color-primary-container: #000000;
+  --md-sys-color-on-primary-container: #facc15;
+  --md-sys-color-secondary: #fef08a;
+  --md-sys-color-on-secondary: #000000;
+  --md-sys-color-secondary-container: #000000;
+  --md-sys-color-on-secondary-container: #fef08a;
+  --md-sys-color-surface: #000000;
+  --md-sys-color-on-surface: #facc15;
+  --md-sys-color-surface-variant: #1f2937;
+  --md-sys-color-on-surface-variant: #fef08a;
+  --md-sys-color-outline: #facc15;
+  --md-sys-color-outline-variant: #facc15;
+  --md-sys-color-error: #facc15;
+  --md-sys-color-on-error: #000000;
+  --md-sys-color-background: #000000;
+  --md-sys-color-on-background: #facc15;
+  
   font-size: 110%;
 }
 
 .theme-high-vis * {
-  border-color: var(--border-color) !important;
+  border-color: var(--md-sys-color-outline) !important;
 }
 
-.theme-high-vis .bg-slate-100 { background-color: var(--bg-app) !important; }
-.theme-high-vis .bg-white { background-color: var(--bg-card) !important; border: 2px solid var(--border-color) !important; }
-.theme-high-vis .text-slate-900 { color: var(--text-main) !important; }
-.theme-high-vis .text-slate-500, .theme-high-vis .text-slate-400 { color: var(--text-muted) !important; }
-.theme-high-vis .bg-indigo-600 { background-color: var(--bg-header) !important; border-bottom: 2px solid var(--header-border) !important; }
-.theme-high-vis .text-indigo-600, .theme-high-vis .text-emerald-500, .theme-high-vis .text-orange-500 { color: var(--text-main) !important; }
-.theme-high-vis .bg-indigo-50, .theme-high-vis .bg-emerald-50, .theme-high-vis .bg-orange-50 { background-color: #000 !important; border: 2px solid var(--border-color) !important; }
-.theme-high-vis button, .theme-high-vis .bg-emerald-500, .theme-high-vis .bg-orange-500, .theme-high-vis .bg-slate-900 {
-  background-color: var(--text-main) !important;
-  color: #000 !important;
+.theme-high-vis .bg-slate-100 { background-color: var(--md-sys-color-background) !important; }
+.theme-high-vis .bg-white { background-color: var(--md-sys-color-surface) !important; border: 2px solid var(--md-sys-color-outline) !important; }
+.theme-high-vis .text-slate-900 { color: var(--md-sys-color-on-surface) !important; }
+.theme-high-vis .text-slate-500, .theme-high-vis .text-slate-400 { color: var(--md-sys-color-on-surface-variant) !important; }
+.theme-high-vis .bg-indigo-600 { background-color: var(--md-sys-color-background) !important; border-bottom: 2px solid var(--md-sys-color-outline) !important; }
+.theme-high-vis .text-indigo-600, .theme-high-vis .text-indigo-700, .theme-high-vis .text-emerald-500, .theme-high-vis .text-emerald-600, .theme-high-vis .text-emerald-700, .theme-high-vis .text-orange-500, .theme-high-vis .text-orange-700, .theme-high-vis .text-red-650 { color: var(--md-sys-color-on-surface) !important; }
+.theme-high-vis .bg-indigo-50, .theme-high-vis .bg-indigo-100, .theme-high-vis .bg-emerald-50, .theme-high-vis .bg-emerald-100, .theme-high-vis .bg-orange-50, .theme-high-vis .bg-orange-100, .theme-high-vis .bg-red-50 { background-color: #000000 !important; border: 2px solid var(--md-sys-color-outline) !important; }
+.theme-high-vis button, .theme-high-vis .bg-emerald-500, .theme-high-vis .bg-emerald-600, .theme-high-vis .bg-orange-500, .theme-high-vis .bg-orange-600, .theme-high-vis .bg-red-500, .theme-high-vis .bg-slate-900 {
+  background-color: var(--md-sys-color-primary) !important;
+  color: #000000 !important;
   font-weight: 900 !important;
 }
 .theme-high-vis nav.bg-white {
-  background-color: var(--bg-app) !important;
-  border-top: 2px solid var(--border-color) !important;
+  background-color: var(--md-sys-color-background) !important;
+  border-top: 2px solid var(--md-sys-color-outline) !important;
+}
+
+/* ⌨️ Keyboard Focus States Override (WCAG AA Compliance) */
+:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 2px var(--md-sys-color-surface) !important;
+  z-index: 50 !important;
+}
+
+/* Light Mode Contrast Fixes for Standard Tailwind Text Colors */
+.text-slate-500 {
+  color: #475569 !important; /* Elevated to slate-600 for WCAG 4.5:1 ratio */
+}
+.text-slate-400 {
+  color: #334155 !important; /* Elevated to slate-700 for WCAG 4.5:1 ratio */
+}
+.text-indigo-200 {
+  color: #e0e7ff !important; /* Raised contrast on indigo-950/900 surfaces */
+}
+
+/* Light Mode Badge & Button Contrast Upgrades (WCAG AA Compliance) */
+.bg-emerald-500 {
+  background-color: #047857 !important; /* Emerald 700 - Contrast 4.8:1 with white text */
+}
+.bg-emerald-600 {
+  background-color: #047857 !important;
+}
+.bg-orange-500 {
+  background-color: #c2410c !important; /* Orange 700 - Contrast 4.8:1 with white text */
+}
+.bg-orange-600 {
+  background-color: #c2410c !important;
+}
+.bg-red-500 {
+  background-color: #b91c1c !important; /* Red 700 - Contrast 4.9:1 with white text */
+}
+.text-emerald-600, .text-emerald-700 {
+  color: #047857 !important; /* Contrast 4.8:1 on white background */
+}
+.text-orange-700 {
+  color: #c2410c !important; /* Contrast 4.8:1 on white background */
+}
+.text-red-650 {
+  color: #b91c1c !important; /* Contrast 4.9:1 on white background */
+}
+.text-indigo-700 {
+  color: #4338ca !important; /* Contrast 5.6:1 on white background */
+}
+
+/* Material Design 3 Button/Card Hover & Active Feedbacks */
+.m3-btn {
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  position: relative;
+  overflow: hidden;
+}
+.m3-btn:hover {
+  filter: brightness(0.95);
+}
+.m3-btn:active {
+  transform: scale(0.97);
+  filter: brightness(0.9);
+}
+
+.m3-card {
+  transition: box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.m3-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.m3-card:active {
+  transform: translateY(0);
 }

@@ -3,14 +3,72 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { QrCode, X, Search, Focus, Play, Square } from 'lucide-react';
 import { Booking } from '../../types';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 export default function OperatorScan() {
+  useDocumentTitle("Scan Equipment Tag");
   const navigate = useNavigate();
   const { bookings, equipment, startHire, endHire } = useStore();
   const [scanning, setScanning] = useState(false);
   const [scannedId, setScannedId] = useState('');
   const [scannedBooking, setScannedBooking] = useState<Booking | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [useWebcam, setUseWebcam] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+
+  const isDesktop = React.useMemo(() => {
+    return !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  }, []);
+
+  React.useEffect(() => {
+    let cleanupTimer: NodeJS.Timeout | null = null;
+    let activeStream: MediaStream | null = null;
+    
+    if (isDesktop && !scannedBooking) {
+      const initCamera = async () => {
+        try {
+          setError(null);
+          setScanning(true);
+          const mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+          });
+          activeStream = mediaStream;
+          setStream(mediaStream);
+          setUseWebcam(true);
+          if (videoRef.current) {
+            videoRef.current.srcObject = mediaStream;
+          }
+          
+          cleanupTimer = setTimeout(() => {
+            if (activeStream) {
+              activeStream.getTracks().forEach(track => track.stop());
+            }
+            setUseWebcam(false);
+            setScanning(false);
+            const target = bookings.find(b => b.status === 'confirmed') || bookings.find(b => b.status === 'active');
+            if (target) {
+              setScannedBooking(target);
+            } else {
+              alert("Booking not found or no active hires to scan.");
+            }
+          }, 10000);
+        } catch (err: any) {
+          console.warn("Webcam access failed:", err);
+          setUseWebcam(false);
+          setScanning(false);
+        }
+      };
+      initCamera();
+    }
+    
+    return () => {
+      if (cleanupTimer) clearTimeout(cleanupTimer);
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isDesktop, scannedBooking, bookings]);
 
   // Mock scan function: handles manual ID testing or automatic find
   const handleScan = (id: string = '') => {
@@ -94,23 +152,33 @@ export default function OperatorScan() {
       <div className="flex-1 flex flex-col items-center justify-center lg:max-w-lg lg:mx-auto lg:w-full">
         {!scannedBooking ? (
           <>
-            <div className="relative w-64 h-64 sm:w-80 sm:h-80 mb-8">
-              {/* Simulated Scanner Viewfinder */}
-              <div className="absolute inset-0 border-2 border-dashed border-white/30 rounded-3xl"></div>
+            <div className="relative w-64 h-64 sm:w-80 sm:h-80 mb-8 overflow-hidden rounded-3xl bg-black border border-white/10">
+              <video 
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover ${useWebcam ? 'block' : 'hidden'}`}
+              />
               
-              {/* Corner brackets */}
-              <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-emerald-500 rounded-tl-3xl"></div>
-              <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-emerald-500 rounded-tr-3xl"></div>
-              <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-emerald-500 rounded-bl-3xl"></div>
-              <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-emerald-500 rounded-br-3xl"></div>
-
-              {scanning && (
-                <div className="absolute inset-x-0 h-1 bg-emerald-500 shadow-[0_0_15px_3px_rgba(16,185,129,0.7)] animate-[scan_1.5s_ease-in-out_infinite]"></div>
+              {!useWebcam && (
+                <div className="absolute inset-0 flex items-center justify-center text-white/50">
+                  <Focus className="w-16 h-16 opacity-50" />
+                </div>
               )}
               
-              <div className="absolute inset-0 flex items-center justify-center text-white/50">
-                <Focus className="w-16 h-16 opacity-50" />
-              </div>
+              {/* Simulated Scanner Viewfinder Overlay */}
+              <div className="absolute inset-0 border-2 border-dashed border-white/30 rounded-3xl pointer-events-none"></div>
+              
+              {/* Corner brackets */}
+              <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-emerald-500 rounded-tl-3xl pointer-events-none"></div>
+              <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-emerald-500 rounded-tr-3xl pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-emerald-500 rounded-bl-3xl pointer-events-none"></div>
+              <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-emerald-500 rounded-br-3xl pointer-events-none"></div>
+
+              {scanning && (
+                <div className="absolute inset-x-0 h-1 bg-emerald-500 shadow-[0_0_15px_3px_rgba(16,185,129,0.7)] animate-[scan_1.5s_ease-in-out_infinite] pointer-events-none"></div>
+              )}
             </div>
             
             <p className="text-white/80 text-center font-medium mb-6">
@@ -175,9 +243,17 @@ export default function OperatorScan() {
               <p className="text-sm text-slate-500 mb-1">Equipment</p>
               <p className="font-bold text-lg text-slate-900 leading-tight">{getEqName(scannedBooking.machine_id)}</p>
               
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <p className="text-sm text-slate-500 mb-1">Customer</p>
-                <p className="font-bold text-slate-900">{scannedBooking.hirer_name}</p>
+              <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">Customer</p>
+                  <p className="font-bold text-slate-900">{scannedBooking.hirer_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">Transport</p>
+                  <p className={`font-bold ${scannedBooking.deliveryNeeded ? 'text-indigo-650' : 'text-emerald-700'}`}>
+                    {scannedBooking.deliveryNeeded ? "🚛 Depot Delivery" : "🚶 Customer Collection"}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -186,14 +262,14 @@ export default function OperatorScan() {
                 onClick={executeAction}
                 className="w-full bg-emerald-500 text-white font-extrabold text-lg py-5 rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
               >
-                <Play className="w-6 h-6 fill-white" /> Start Hire
+                <Play className="w-6 h-6 fill-white" /> {scannedBooking.deliveryNeeded ? "Send out for delivery" : "Hand over to customer"}
               </button>
             ) : scannedBooking.status === 'active' ? (
               <button 
                 onClick={executeAction}
                 className="w-full bg-slate-900 text-white font-extrabold text-lg py-5 rounded-2xl shadow-lg shadow-slate-900/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
               >
-                <Square className="w-6 h-6 fill-white" /> Complete & Return
+                <Square className="w-6 h-6 fill-white" /> {scannedBooking.deliveryNeeded ? "Collect from customer" : "Accept returned machine"}
               </button>
             ) : (
               <div className="text-center py-4">

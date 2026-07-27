@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../../store';
 import { Phone, ArrowLeft, CheckCircle2, XCircle, Truck, Play, Square } from 'lucide-react';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 export default function OperatorHireDetails() {
   const { id } = useParams<{ id: string }>();
@@ -9,6 +10,8 @@ export default function OperatorHireDetails() {
   const { bookings, equipment, updateBookingStatus, startHire, endHire } = useStore();
 
   const booking = bookings.find(b => b.booking_id === id);
+  useDocumentTitle(booking ? `Hire ${booking.booking_id} Details` : "Hire Details");
+  
   if (!booking) return <div className="p-4 text-center">Not found</div>;
 
   const item = equipment.find(e => e.machine_id === booking.machine_id);

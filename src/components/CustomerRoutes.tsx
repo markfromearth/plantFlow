@@ -13,16 +13,16 @@ const CustomerLayout = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10 w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/customer" className="flex items-center gap-2">
+          <Link to="/customer" className="flex items-center gap-2 focus-visible:ring-3 focus-visible:ring-indigo-500 rounded-lg">
             <div className="bg-indigo-600 p-2 rounded-lg">
               <HardHat className="w-6 h-6 text-white" />
             </div>
             <span className="text-xl font-bold text-slate-900 tracking-tight">PlantFlow OS</span>
           </Link>
-          <nav className="flex items-center gap-4">
-            <Link to="/customer" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Equipment</Link>
+          <nav className="flex items-center gap-4" aria-label="Customer Navigation">
+            <Link to="/customer" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors focus-visible:ring-3 focus-visible:ring-indigo-500 px-2 py-1 rounded">Equipment</Link>
             <div className="hidden sm:block">
-              <a href="tel:0800123456" className="text-sm font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-4 py-2 rounded-md transition-colors">
+              <a href="tel:0800123456" aria-label="Call customer support on 0 8 0 0. 1 2 3. 4 5 6" className="text-sm font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-4 py-2 rounded-md transition-colors focus-visible:ring-3 focus-visible:ring-indigo-500">
                 Call Us: 0800 123 456
               </a>
             </div>

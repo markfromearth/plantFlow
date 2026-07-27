@@ -4,6 +4,7 @@ import { useStore } from '../../store';
 import { Equipment } from '../../types';
 import { ArrowLeft, Save, Camera, Loader2, Upload, Trash2, Plus, Sparkles, FolderPlus } from 'lucide-react';
 import { useOAuthToken } from '../../hooks/useOAuthToken';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 interface PendingBatchItem {
   id: string;
@@ -66,6 +67,7 @@ function compressImageClient(base64Str: string, maxWidth = 1024, maxHeight = 102
 }
 
 export default function OperatorAddEquipment() {
+  useDocumentTitle("Fleet Intake");
   const navigate = useNavigate();
   const { addEquipment } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -351,17 +353,37 @@ export default function OperatorAddEquipment() {
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-slate-200 text-slate-700 transition-colors"><ArrowLeft className="w-6 h-6" /></button>
+          <button onClick={() => navigate(-1)} aria-label="Go back" className="p-2 -ml-2 rounded-full hover:bg-slate-200 text-slate-700 transition-colors focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none"><ArrowLeft className="w-6 h-6" /></button>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Fleet Intake</h1>
         </div>
-        <div className="bg-slate-100 p-1 rounded-xl flex gap-1 border border-slate-200">
-          <button onClick={() => setActiveTab('single')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'single' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Single Form</button>
-          <button onClick={() => setActiveTab('batch')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'batch' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Batch Ingest</button>
+        <div role="tablist" aria-label="Fleet Ingest Mode" className="bg-slate-100 p-1 rounded-xl flex gap-1 border border-slate-200">
+          <button 
+            id="single-tab"
+            role="tab"
+            aria-selected={activeTab === 'single'}
+            aria-controls="single-tab-panel"
+            tabIndex={activeTab === 'single' ? 0 : -1}
+            onClick={() => setActiveTab('single')} 
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'single' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'} focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none`}
+          >
+            Single Form
+          </button>
+          <button 
+            id="batch-tab"
+            role="tab"
+            aria-selected={activeTab === 'batch'}
+            aria-controls="batch-tab-panel"
+            tabIndex={activeTab === 'batch' ? 0 : -1}
+            onClick={() => setActiveTab('batch')} 
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'batch' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'} focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none`}
+          >
+            Batch Ingest
+          </button>
         </div>
       </div>
 
       {activeTab === 'single' ? (
-        <>
+        <div id="single-tab-panel" role="tabpanel" aria-labelledby="single-tab" className="space-y-6">
           <div className="bg-indigo-600 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
             <div className="relative z-10 flex flex-col items-center text-center space-y-4">
               <div className="bg-white/20 p-4 rounded-full mx-auto backdrop-blur-sm"><Camera className="w-8 h-8 text-white" /></div>
@@ -369,36 +391,48 @@ export default function OperatorAddEquipment() {
                 <h2 className="text-xl font-bold mb-1">AI Machine Identifier</h2>
                 <p className="text-indigo-100 text-sm">Take a photo and we'll auto-fill the details.</p>
               </div>
-              <input type="file" accept="image/*" capture="environment" className="hidden" ref={fileInputRef} onChange={handleImageCapture} />
-              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="bg-white text-indigo-700 font-bold px-6 py-3 rounded-xl hover:bg-indigo-50 transition-colors active:scale-95 flex items-center gap-2">
+              <input type="file" id="ai-camera-file" accept="image/*" capture="environment" className="hidden" ref={fileInputRef} onChange={handleImageCapture} />
+              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isLoading} aria-label="Upload photo to auto-fill details" className="bg-white text-indigo-700 font-bold px-6 py-3 rounded-xl hover:bg-indigo-50 transition-colors active:scale-95 flex items-center gap-2 focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none">
                 {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Analyzing...</> : <><Upload className="w-5 h-5" /> Upload Photo</>}
               </button>
-              {errorMsg && <div className="text-red-200 text-sm bg-red-900/40 px-3 py-2 rounded-lg">{errorMsg}</div>}
-              {successMsg && <div className="text-emerald-300 text-sm font-medium bg-emerald-900/40 px-3 py-2 rounded-lg">{successMsg}</div>}
+              {errorMsg && <div role="alert" className="text-red-200 text-sm bg-red-900/40 px-3 py-2 rounded-lg w-full max-w-sm">{errorMsg}</div>}
+              {successMsg && <div role="status" aria-live="polite" className="text-emerald-300 text-sm font-medium bg-emerald-900/40 px-3 py-2 rounded-lg w-full max-w-sm">{successMsg}</div>}
             </div>
           </div>
-          <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
-            <div className="flex justify-center mb-6"><img src={formData.image_url} alt="Equipment" className="w-32 h-32 object-cover rounded-2xl shadow-sm border-4 border-white" /></div>
-            <div><label className="block text-sm font-bold text-slate-700 mb-1">Machine ID</label><input required type="text" name="machine_id" value={formData.machine_id} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
-            <div><label className="block text-sm font-bold text-slate-700 mb-1">Name</label><input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
-            <div><label className="block text-sm font-bold text-slate-700 mb-1">Category</label><select name="category" value={formData.category} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 bg-white"><option value="Excavators">Excavators</option><option value="Dumpers">Dumpers</option><option value="Compaction">Compaction</option><option value="Access">Access</option></select></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-sm font-bold text-slate-700 mb-1">Day Rate (£)</label><input required type="number" name="day_rate" value={formData.day_rate} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
-              <div><label className="block text-sm font-bold text-slate-700 mb-1">Delivery Rate (£)</label><input required type="number" name="delivery_rate" value={formData.delivery_rate} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
+          <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              {/* Left Column: Widescreen Image View & Info */}
+              <div className="flex flex-col items-center justify-center p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-4 min-h-[300px]">
+                <img src={formData.image_url} alt="Equipment preview" className="w-48 h-48 object-cover rounded-2xl shadow border-4 border-white" />
+                <p className="text-slate-400 text-xs text-center leading-normal max-w-xs font-semibold">
+                  Capture a clean visual of the equipment from the camera. The AI vision agent will automatically estimate the machine specifications.
+                </p>
+              </div>
+
+              {/* Right Column: Ingest Inputs */}
+              <div className="space-y-4">
+                <div><label htmlFor="equip-machine-id" className="block text-sm font-bold text-slate-700 mb-1">Machine ID</label><input required id="equip-machine-id" type="text" name="machine_id" value={formData.machine_id} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none" /></div>
+                <div><label htmlFor="equip-name" className="block text-sm font-bold text-slate-700 mb-1">Name</label><input required id="equip-name" type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none" /></div>
+                <div><label htmlFor="equip-category" className="block text-sm font-bold text-slate-700 mb-1">Category</label><select id="equip-category" name="category" value={formData.category} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 bg-white focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none"><option value="Excavators">Excavators</option><option value="Dumpers">Dumpers</option><option value="Compaction">Compaction</option><option value="Access">Access</option></select></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label htmlFor="equip-day-rate" className="block text-sm font-bold text-slate-700 mb-1">Day Rate (£)</label><input required id="equip-day-rate" type="number" name="day_rate" value={formData.day_rate} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none" /></div>
+                  <div><label htmlFor="equip-delivery-rate" className="block text-sm font-bold text-slate-700 mb-1">Delivery Rate (£)</label><input required id="equip-delivery-rate" type="number" name="delivery_rate" value={formData.delivery_rate} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none" /></div>
+                </div>
+                <div><label htmlFor="equip-access-width" className="block text-sm font-bold text-slate-700 mb-1">Access Width (mm)</label><input required id="equip-access-width" type="number" name="access_width_mm" value={formData.access_width_mm} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none" /></div>
+                <div><label htmlFor="equip-compliance" className="block text-sm font-bold text-slate-700 mb-1">Compliance Expiry</label><input required id="equip-compliance" type="date" name="compliance_expiry" value={formData.compliance_expiry} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none" /></div>
+                <button type="submit" disabled={isSubmitting} className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl mt-6 focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none">{isSubmitting ? 'Saving...' : 'Save Equipment'}</button>
+              </div>
             </div>
-            <div><label className="block text-sm font-bold text-slate-700 mb-1">Access Width (mm)</label><input required type="number" name="access_width_mm" value={formData.access_width_mm} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
-            <div><label className="block text-sm font-bold text-slate-700 mb-1">Compliance Expiry</label><input required type="date" name="compliance_expiry" value={formData.compliance_expiry} onChange={handleChange} className="w-full border border-slate-300 rounded-xl px-4 py-2.5" /></div>
-            <button type="submit" disabled={isSubmitting} className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl mt-6">{isSubmitting ? 'Saving...' : 'Save Equipment'}</button>
           </form>
-        </>
+        </div>
       ) : (
-        <div className="space-y-6">
+        <div id="batch-tab-panel" role="tabpanel" aria-labelledby="batch-tab" className="space-y-6">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center text-white">
             <div className="relative z-10 space-y-4 max-w-md mx-auto">
-              <FolderPlus className="w-12 h-12 text-indigo-400 mx-auto" />
-              <h3 className="text-xl font-bold">Batch Intake Console</h3>
-              <input type="file" ref={batchInputRef} onChange={handleBatchImageUpload} accept="image/*" multiple className="hidden" />
-              <button type="button" onClick={() => batchInputRef.current?.click()} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold">Select Photos</button>
+              <FolderPlus className="w-12 h-12 text-indigo-400 mx-auto" aria-hidden="true" />
+              <h2 className="text-xl font-bold">Batch Intake Console</h2>
+              <input type="file" id="batch-camera-files" ref={batchInputRef} onChange={handleBatchImageUpload} accept="image/*" multiple className="hidden" />
+              <button type="button" onClick={() => batchInputRef.current?.click()} aria-label="Upload multiple photos for batch ingestion" className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none">Select Photos</button>
             </div>
           </div>
           {batchItems.length > 0 && (
@@ -407,7 +441,7 @@ export default function OperatorAddEquipment() {
                 <h3 className="text-md font-bold text-slate-800">Batch Queue ({batchItems.filter(i => i.status === 'completed').length} / {batchItems.length})</h3>
                 <button onClick={() => setBatchItems([])} className="text-xs text-slate-400">Clear</button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {batchItems.map((item) => (
                   <div key={item.id} className="bg-white border border-slate-200 rounded-2xl p-4">
                     <div className="flex gap-4">

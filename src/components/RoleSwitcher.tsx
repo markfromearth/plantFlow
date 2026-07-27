@@ -70,6 +70,16 @@ export default function RoleSwitcher() {
     }
   }, [logs, isOpen]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Don't show the switcher on the landing page
   if (location.pathname === '/') {
     return null;
@@ -81,10 +91,11 @@ export default function RoleSwitcher() {
         {/* Debug Console Toggle Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="bg-slate-900 text-white p-3 rounded-full shadow-lg border border-slate-700 flex items-center justify-center hover:bg-slate-800 transition-all active:scale-95 relative"
+          className="bg-slate-900 text-white p-3 rounded-full shadow-lg border border-slate-700 flex items-center justify-center hover:bg-slate-800 transition-all active:scale-95 relative focus-visible:ring-3 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 outline-none"
           title="Toggle Debug Console Logs"
+          aria-label="Toggle Debug Console Logs"
         >
-          <Terminal className="w-5 h-5 text-emerald-400" />
+          <Terminal className="w-5 h-5 text-emerald-400" aria-hidden="true" />
           {logs.filter(l => l.type === 'error').length > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black rounded-full w-4.5 h-4.5 flex items-center justify-center animate-pulse">
               {logs.filter(l => l.type === 'error').length}
@@ -95,10 +106,11 @@ export default function RoleSwitcher() {
         {/* Role Switcher Button */}
         <button
           onClick={() => navigate(isOperator ? '/customer' : '/operator')}
-          className="bg-white p-3 rounded-full shadow-lg border border-slate-200 flex items-center gap-2 hover:bg-slate-50 transition-colors text-slate-700 active:scale-95"
+          className="bg-white p-3 rounded-full shadow-lg border border-slate-200 flex items-center gap-2 hover:bg-slate-50 transition-colors text-slate-700 active:scale-95 focus-visible:ring-3 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 outline-none"
           title={`Switch to ${isOperator ? 'Customer' : 'Operator'} View`}
+          aria-label={isOperator ? "Switch to Customer View" : "Switch to Operator Console"}
         >
-          {isOperator ? <Users className="w-5 h-5 text-indigo-600" /> : <HardHat className="w-5 h-5 text-indigo-600" />}
+          {isOperator ? <Users className="w-5 h-5 text-indigo-600" aria-hidden="true" /> : <HardHat className="w-5 h-5 text-indigo-600" aria-hidden="true" />}
           <span className="hidden sm:inline font-bold text-sm">
             {isOperator ? 'Customer View' : 'Operator Console'}
           </span>
@@ -107,26 +119,34 @@ export default function RoleSwitcher() {
 
       {/* Debug Console Overlay Drawer */}
       {isOpen && (
-        <div className="fixed bottom-20 left-4 right-4 max-w-2xl mx-auto bg-slate-950/95 backdrop-blur border border-slate-800 text-slate-100 rounded-2xl shadow-2xl z-50 flex flex-col h-80 overflow-hidden font-mono animate-in slide-in-from-bottom duration-300">
+        <div 
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="console-logs-title"
+          className="fixed bottom-20 left-4 right-4 max-w-2xl mx-auto bg-slate-950/95 backdrop-blur border border-slate-800 text-slate-100 rounded-2xl shadow-2xl z-50 flex flex-col h-80 overflow-hidden font-mono animate-in slide-in-from-bottom duration-300"
+        >
           {/* Header */}
           <div className="bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <Terminal className="w-4 h-4 text-emerald-400 animate-pulse" aria-hidden="true" />
+              <span id="console-logs-title" className="sr-only">System Console Logs</span>
               <span className="text-xs font-bold text-slate-300 tracking-wider">SYSTEM CONSOLE LOGS</span>
             </div>
             <div className="flex items-center gap-1.5">
               <button 
                 onClick={() => setLogs([])}
-                className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none"
                 title="Clear Logs"
+                aria-label="Clear console logs"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" aria-hidden="true" />
               </button>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors"
+                className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-colors focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none"
+                aria-label="Close console logs"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           </div>

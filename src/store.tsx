@@ -9,6 +9,7 @@ interface StoreState {
   equipment: Equipment[];
   bookings: Booking[];
   highVisMode: boolean;
+  themeMode: 'light' | 'dark' | 'high-vis';
   isLoadingEquipment: boolean;
   isLoadingBookings: boolean;
   errorEquipment: string | null;
@@ -31,11 +32,27 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [equipment, setEquipment] = useState<Equipment[]>(INITIAL_EQUIPMENT);
   const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
-  const [highVisMode, setHighVisMode] = useState(false);
+  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'high-vis'>(() => {
+    const saved = localStorage.getItem('plantflow-os-theme');
+    if (saved === 'light' || saved === 'dark' || saved === 'high-vis') {
+      return saved;
+    }
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return systemPrefersDark ? 'dark' : 'light';
+  });
+
+  const highVisMode = themeMode === 'high-vis';
   const [isLoadingEquipment, setIsLoadingEquipment] = useState(false);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   const [errorEquipment, setErrorEquipment] = useState<string | null>(null);
   const [errorBookings, setErrorBookings] = useState<string | null>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('theme-light', 'theme-dark', 'theme-high-vis');
+    root.classList.add(`theme-${themeMode}`);
+    localStorage.setItem('plantflow-os-theme', themeMode);
+  }, [themeMode]);
 
   const init = async () => {
     setIsLoadingEquipment(true);
@@ -76,7 +93,13 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return () => unsubscribe();
   }, []);
 
-  const toggleHighVisMode = () => setHighVisMode(prev => !prev);
+  const toggleHighVisMode = () => {
+    setThemeMode(prev => {
+      if (prev === 'light') return 'dark';
+      if (prev === 'dark') return 'high-vis';
+      return 'light';
+    });
+  };
 
 
   const addBooking = async (booking: Booking) => {
@@ -208,6 +231,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       equipment,
       bookings,
       highVisMode,
+      themeMode,
       isLoadingEquipment,
       isLoadingBookings,
       errorEquipment,

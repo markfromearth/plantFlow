@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation, Link, Navigate } from 'react-router-dom';
 import { QrCode, ArrowLeft } from 'lucide-react';
 import { Booking, Equipment } from '../../types';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 export default function QrDisplay() {
   const location = useLocation();
@@ -14,6 +15,8 @@ export default function QrDisplay() {
   const { booking, equipment, action } = state;
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(booking.booking_id)}&size=300&margin=1`;
   const isStart = action === 'start';
+  
+  useDocumentTitle(isStart ? "Start Hire QR Code" : "End Hire QR Code");
 
   return (
     <div className="max-w-md mx-auto pt-8">
@@ -30,7 +33,11 @@ export default function QrDisplay() {
           {isStart ? 'Start Hire QR' : 'End Hire QR'}
         </h1>
         <p className="text-slate-500 mb-8 max-w-sm">
-          Show this code to the delivery driver or depot staff to {isStart ? 'receive' : 'return'} your {equipment.name}.
+          {booking.deliveryNeeded ? (
+            `Show this code to the delivery driver to ${isStart ? 'receive' : 'return'} your ${equipment.name}.`
+          ) : (
+            `Present this code at the depot counter (Unit 4, Industrial Way) to ${isStart ? 'collect' : 'return'} your ${equipment.name}.`
+          )}
         </p>
 
         <div className="bg-white p-4 rounded-2xl mb-8 shadow-inner border border-slate-200">

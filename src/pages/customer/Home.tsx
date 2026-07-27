@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Search, Calendar } from 'lucide-react';
 import { INITIAL_EQUIPMENT } from '../../mockData';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 const CATEGORIES = [
   { 
@@ -134,6 +135,7 @@ function getConfidenceSignal(name: string): string {
 }
 
 export default function CustomerHome() {
+  useDocumentTitle("Hire Equipment");
   const [searchQuery, setSearchQuery] = useState('');
 
   const searchResults = useMemo(() => {
@@ -159,12 +161,19 @@ export default function CustomerHome() {
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-slate-400" />
             </div>
+            <label htmlFor="search-equipment-input" className="sr-only">Search equipment</label>
             <input
+              id="search-equipment-input"
               type="text"
               placeholder="Search equipment..."
-              className="w-full bg-white text-slate-900 rounded-2xl pl-11 pr-4 py-3.5 font-medium shadow-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all"
+              className="w-full bg-white text-slate-900 rounded-2xl pl-11 pr-4 py-3.5 font-medium shadow-sm outline-none focus-visible:ring-3 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setSearchQuery('');
+                }
+              }}
             />
             
             {/* Search Results Dropdown */}
@@ -227,7 +236,13 @@ export default function CustomerHome() {
                 e.preventDefault();
                 document.getElementById(category.id)?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="group relative flex flex-col rounded-xl overflow-hidden h-26 sm:h-28 bg-slate-200 border border-slate-300 hover:border-indigo-600 transition-all cursor-pointer select-none"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  document.getElementById(category.id)?.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="group relative flex flex-col rounded-xl overflow-hidden h-26 sm:h-28 bg-slate-200 border border-slate-300 hover:border-indigo-600 transition-all cursor-pointer select-none m3-card focus-visible:ring-3 focus-visible:ring-indigo-500"
             >
               {/* Background Image */}
               <div className="absolute inset-0 w-full h-full">
@@ -292,7 +307,7 @@ export default function CustomerHome() {
                   <Link 
                     key={item.machine_id} 
                     to={`/customer/equipment/${item.machine_id}`}
-                    className="flex flex-col bg-white rounded-2xl overflow-hidden hover:-translate-y-1 transition-all group shadow-sm border border-slate-200 hover:shadow-xl"
+                    className="flex flex-col bg-white rounded-2xl overflow-hidden hover:-translate-y-1 transition-all group shadow-sm border border-slate-200 hover:shadow-xl m3-card focus-visible:ring-3 focus-visible:ring-indigo-500"
                   >
                     <div className="relative h-48 sm:h-56 overflow-hidden bg-slate-100">
                       <img 

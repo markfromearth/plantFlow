@@ -1,8 +1,10 @@
 import React from 'react';
 import { useLocation, Link, Navigate } from 'react-router-dom';
 import { CheckCircle2, Calendar, HardHat, Phone } from 'lucide-react';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 export default function CustomerBookingSuccess() {
+  useDocumentTitle("Booking Success");
   const location = useLocation();
   const state = location.state as any;
 
@@ -45,7 +47,7 @@ export default function CustomerBookingSuccess() {
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-500 mt-1">
                     <HardHat className="w-4 h-4" />
-                    <span>Delivery: {booking.delivery_window || 'Anytime'}</span>
+                    <span>{booking.deliveryNeeded ? `Delivery: ${booking.delivery_window || 'Anytime'}` : 'Collection: Depot In-Person'}</span>
                   </div>
                 </div>
               </div>
@@ -63,6 +65,12 @@ export default function CustomerBookingSuccess() {
                 <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center shrink-0">2</div>
                 <p className="text-slate-600 mt-1">We will call you on <strong>{booking.hirer_phone}</strong> to confirm and arrange payment.</p>
               </div>
+              {!booking.deliveryNeeded && (
+                <div className="flex gap-4 animate-in fade-in slide-in-from-top-2">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center shrink-0">3</div>
+                  <p className="text-slate-600 mt-1">Visit our depot at <strong>Unit 4, Industrial Way, SE1 0AA</strong> with your photo ID and the Start Hire QR code below.</p>
+                </div>
+              )}
             </div>
           </div>
 
