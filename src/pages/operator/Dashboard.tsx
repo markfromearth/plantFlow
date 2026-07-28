@@ -25,6 +25,7 @@ interface Movement {
   deliveryWindow: string;
   deliveryNeeded: boolean;
   notes?: string;
+  driverId?: string;
 }
 
 export default function OperatorDashboard() {
@@ -37,6 +38,7 @@ export default function OperatorDashboard() {
   const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
   const [activeMovement, setActiveMovement] = useState<Movement | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   // Sync state for opening/closing transitions
   useEffect(() => {
@@ -202,38 +204,88 @@ export default function OperatorDashboard() {
     });
   }, [bookings, equipment]);
 
-  // Order sorting functions
-  const moveMovementById = (id: string, direction: 'up' | 'down') => {
-    setMovements(prev => {
-      const index = prev.findIndex(m => m.id === id);
-      if (index === -1) return prev;
-      const next = [...prev];
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      if (targetIndex >= 0 && targetIndex < next.length) {
-        const temp = next[index];
-        next[index] = next[targetIndex];
-        next[targetIndex] = temp;
-      }
-      return next;
-    });
+  // Tactical Dispatch Drivers Pool
+  const driversList = useMemo(() => [
+    { id: 'drv-steve', name: 'Steve', vehicle: 'Flatbed Truck 1', maxCapacity: 8000 },
+    { id: 'drv-dave', name: 'Dave', vehicle: 'Transit Van 2', maxCapacity: 2000 },
+    { id: 'drv-sarah', name: 'Sarah', vehicle: 'Heavy Truck 3', maxCapacity: 12000 }
+  ], []);
+
+  const getJobWeight = (machineName: string) => {
+    const name = machineName.toLowerCase();
+    if (name.includes('excavator')) return 1500;
+    if (name.includes('dumper')) return 3000;
+    if (name.includes('roller')) return 1200;
+    return 1000;
   };
 
-  const toggleMovementSlot = (id: string) => {
+  const getDriverStats = (driverId: string, maxCapacity: number) => {
+    const assignedJobs = movements.filter(m => m.driverId === driverId);
+    const currentWeight = assignedJobs.reduce((sum, j) => sum + getJobWeight(j.machineName), 0);
+    const pct = Math.min(100, Math.round((currentWeight / maxCapacity) * 100));
+    return { currentWeight, pct };
+  };
+
+  // Assign job to driver
+  const assignDriver = (jobId: string, driverId: string | undefined) => {
     setMovements(prev => prev.map(m => {
-      if (m.id === id) {
-        const isAM = m.deliveryWindow.includes('Morning');
-        return {
-          ...m,
-          deliveryWindow: isAM ? 'Afternoon Assignment (12:00 - 19:00)' : 'Morning Assignment (08:00 - 12:00)'
-        };
+      if (m.id === jobId) {
+        return { ...m, driverId };
       }
       return m;
     }));
+    setSelectedJobId(null);
   };
 
-  // Filtered movements based on the selected slot filter
-  const filteredMovements = useMemo(() => {
-    let list = [...movements];
+  // Instantly assign the first/top prioritized job in the unassigned pool to a driver
+  const assignNextJob = (driverId: string) => {
+    const unassigned = movements.filter(m => !m.driverId);
+    if (unassigned.length > 0) {
+      assignDriver(unassigned[0].id, driverId);
+    }
+  };
+
+  // Handles up/down reordering in any lane (unassigned or driver-assigned)
+  const moveJob = (id: string, direction: 'up' | 'down') => {
+    setMovements(prev => {
+      const targetJob = prev.find(m => m.id === id);
+      if (!targetJob) return prev;
+      
+      const laneId = targetJob.driverId;
+      const laneJobs = prev.filter(m => m.driverId === laneId);
+      const index = laneJobs.findIndex(m => m.id === id);
+      if (index === -1) return prev;
+      
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex >= 0 && targetIndex < laneJobs.length) {
+        const reordered = [...laneJobs];
+        const temp = reordered[index];
+        reordered[index] = reordered[targetIndex];
+        reordered[targetIndex] = temp;
+        
+        let reorderedIdx = 0;
+        return prev.map(m => {
+          if (m.driverId === laneId) {
+            return reordered[reorderedIdx++];
+          }
+          return m;
+        });
+      }
+      return prev;
+    });
+  };
+
+  // Drag reordering for swimlanes
+  const reorderDriverJobs = (driverId: string, reorderedSublist: Movement[]) => {
+    setMovements(prev => {
+      const otherJobs = prev.filter(m => m.driverId !== driverId);
+      return [...otherJobs, ...reorderedSublist];
+    });
+  };
+
+  // Filtered unassigned movements for the Left Pane
+  const unassignedMovements = useMemo(() => {
+    let list = movements.filter(m => !m.driverId);
     
     if (filterSlot === 'morning') {
       list = list.filter(m => m.deliveryWindow.includes('Morning'));
@@ -255,17 +307,18 @@ export default function OperatorDashboard() {
     return list;
   }, [movements, filterSlot]);
 
-  // Compute operational KPIs for simplified summary
+  // Compute unassigned pool counts for filter chips
   const filterCounts = useMemo(() => {
+    const unassigned = movements.filter(m => !m.driverId);
     return {
-      all: movements.length,
-      morning: movements.filter(m => m.deliveryWindow.includes('Morning')).length,
-      afternoon: movements.filter(m => m.deliveryWindow.includes('Afternoon')).length,
-      attention: movements.filter(m => m.status === 'exception' || m.type === 'maintenance').length
+      all: unassigned.length,
+      morning: unassigned.filter(m => m.deliveryWindow.includes('Morning')).length,
+      afternoon: unassigned.filter(m => m.deliveryWindow.includes('Afternoon')).length,
+      attention: unassigned.filter(m => m.status === 'exception' || m.type === 'maintenance').length
     };
   }, [movements]);
 
-  // Availability statistics for capacity
+  // Availability stats for "How full are we?"
   const getAvailabilityStats = (cat: string) => {
     const total = equipment.filter(e => e.category === cat).length;
     if (total === 0) return { pct: 100, count: 0, total: 0 };
@@ -287,7 +340,7 @@ export default function OperatorDashboard() {
       colorClass = 'bg-slate-100 text-slate-655 border-slate-200';
       icon = <CheckCircle2 className="w-3.5 h-3.5" />;
     } else if (mov.status === 'exception') {
-      text = '⚠️ Needs a decision';
+      text = '⚠️ Needs decision';
       colorClass = 'bg-red-50 text-red-700 border-red-200 animate-pulse';
       icon = <AlertTriangle className="w-3.5 h-3.5" />;
     } else if (mov.type === 'maintenance') {
@@ -344,159 +397,268 @@ export default function OperatorDashboard() {
       await updateEquipmentStatus(mov.machineId, 'maintenance');
     }
 
-    // Refresh selected movement state
     setSelectedMovement(null);
   };
 
   return (
-    <div className="space-y-6 pb-48 pt-2 animate-in fade-in duration-300">
+    <div className="h-[calc(100vh-11rem)] flex gap-4 p-2 overflow-hidden animate-in fade-in duration-300">
       
-      {/* Friendly Header Summary */}
-      <div className="space-y-1 pl-2">
-        <h1 className="text-xl font-black text-slate-900 tracking-tight">Today's deliveries</h1>
-        <p className="text-sm font-bold text-slate-655">
-          {movements.length} deliveries today · {filterCounts.attention === 0 ? 'All looking good' : `${filterCounts.attention} need your attention`}
-        </p>
+      {/* LEFT PANE: The Unassigned Pool */}
+      <div className="w-1/3 flex flex-col h-full bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        {/* Header */}
+        <div className="p-4 border-b border-slate-100 space-y-1">
+          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Unassigned Pool</h2>
+          <p className="text-xs text-slate-550 font-bold">
+            {filterCounts.all} jobs waiting · {filterCounts.attention} need attention
+          </p>
+        </div>
+
+        {/* Filter Chips */}
+        <div className="p-3 bg-slate-50 border-b border-slate-200/50 flex gap-1.5 overflow-x-auto scrollbar-none select-none">
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'morning', label: 'AM Only' },
+            { key: 'afternoon', label: 'PM Only' },
+            { key: 'attention', label: 'Attention' }
+          ].map(filter => {
+            const count = filterCounts[filter.key as keyof typeof filterCounts];
+            const isActive = filterSlot === filter.key;
+            return (
+              <button
+                key={filter.key}
+                onClick={() => setFilterSlot(filter.key as any)}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all shrink-0 border uppercase tracking-wider focus-visible:ring-2 focus-visible:ring-indigo-500 outline-none ${
+                  isActive
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {filter.label} <span className="ml-1 opacity-70">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Scrollable list of chunky cards */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
+          {unassignedMovements.length === 0 ? (
+            <div className="text-slate-400 text-xs font-black py-12 text-center uppercase tracking-wide">No unassigned jobs</div>
+          ) : (
+            unassignedMovements.map((mov) => {
+              const isDelivery = mov.type === 'outbound';
+              const isUrgent = mov.status === 'exception' || mov.type === 'maintenance';
+              const isSelected = selectedJobId === mov.id;
+              
+              // Get postcode/zone from site address
+              const addrWords = mov.siteAddress.split(',');
+              const postcode = addrWords[addrWords.length - 1]?.trim() || 'Zone 1';
+
+              return (
+                <div
+                  key={mov.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', mov.id);
+                  }}
+                  onClick={() => setSelectedJobId(isSelected ? null : mov.id)}
+                  className={`flex flex-col justify-between bg-white border rounded-xl p-4 min-h-[140px] shadow-sm hover:border-slate-350 active:scale-[0.99] transition-all cursor-pointer relative ${
+                    isSelected ? 'ring-2 ring-indigo-500 border-indigo-500' : 'border-slate-200'
+                  } ${isDelivery ? 'border-l-4 border-l-blue-500' : 'border-l-4 border-l-emerald-500'}`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-start">
+                      {/* Bold Gear Type */}
+                      <h4 className="text-sm font-black text-slate-900 leading-snug">{mov.machineName}</h4>
+                      {/* Postcode/Zone tag */}
+                      <span className="text-[10px] font-black text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-wider font-mono">
+                        {postcode}
+                      </span>
+                    </div>
+
+                    {/* Bold Customer */}
+                    <p className="text-xs font-bold text-slate-800">Client: {mov.customerName}</p>
+                    <p className="text-[11px] text-slate-500 line-clamp-1">Site: {mov.siteAddress}</p>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                    <div className="flex gap-1.5 items-center">
+                      {/* Status indicator (icon+word+color) */}
+                      {renderStatus(mov)}
+                      {isUrgent && (
+                        <span className="text-[9px] font-black uppercase text-red-655 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded animate-pulse">
+                          Urgent
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="text-[9px] font-bold text-slate-400">
+                      {mov.deliveryWindow.includes('Morning') ? '☀️ AM' : '🌤️ PM'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
-      {/* Capacity Horizon Accordion */}
-      <details className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm group [&_summary::-webkit-details-marker]:hidden">
-        <summary className="flex justify-between items-center font-black text-xs text-slate-500 uppercase tracking-wider cursor-pointer list-none select-none">
-          <span>How full are we?</span>
-          <span className="text-[10px] text-indigo-650 font-black group-open:hidden">Show details</span>
-          <span className="text-[10px] text-indigo-650 font-black hidden group-open:inline">Hide details</span>
-        </summary>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs mt-3">
-          {['Excavators', 'Dumpers', 'Compaction', 'Access'].map(cat => {
-            const stats = getAvailabilityStats(cat);
-            const isLow = stats.pct < 30;
+      {/* RIGHT PANE: The Vehicle Pool (Swimlanes) */}
+      <div className="w-2/3 flex flex-col h-full bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        {/* Header */}
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+          <div>
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Vehicle Pool</h2>
+            <p className="text-xs text-slate-500 font-bold">Assign jobs to drivers and arrange their delivery flow</p>
+          </div>
+          {selectedJobId && (
+            <span className="text-xs bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1 rounded-full font-black animate-pulse uppercase tracking-wider">
+              Tapping a vehicle swimlane will assign job
+            </span>
+          )}
+        </div>
+
+        {/* Swimlanes Row */}
+        <div className="flex-1 flex overflow-x-auto p-4 gap-4 bg-slate-50/50 scrollbar-thin">
+          {driversList.map((driver) => {
+            const assignedJobs = movements.filter(m => m.driverId === driver.id);
+            const { currentWeight, pct } = getDriverStats(driver.id, driver.maxCapacity);
+            const isFull = pct >= 90;
 
             return (
-              <div key={cat} className="space-y-1">
-                <div className="flex justify-between font-bold text-[11px] text-slate-700">
-                  <span className="truncate">{cat}</span>
-                  <span className={isLow ? 'text-red-500' : 'text-slate-500'}>
-                    {stats.pct}% ({stats.count}/{stats.total}) {isLow && '⚠️'}
-                  </span>
+              <div
+                key={driver.id}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  const jobId = e.dataTransfer.getData('text/plain');
+                  if (jobId) assignDriver(jobId, driver.id);
+                }}
+                onClick={() => {
+                  if (selectedJobId) {
+                    assignDriver(selectedJobId, driver.id);
+                  }
+                }}
+                className={`flex flex-col w-72 shrink-0 bg-white border rounded-xl p-3 h-full shadow-sm transition-all select-none ${
+                  selectedJobId ? 'hover:border-indigo-400 hover:ring-2 hover:ring-indigo-100 cursor-pointer' : 'border-slate-200'
+                }`}
+              >
+                {/* Vehicle Header */}
+                <div className="pb-3 border-b border-slate-100 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">{driver.name}</h4>
+                      <p className="text-[10px] text-slate-450 font-bold">{driver.vehicle}</p>
+                    </div>
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                      isFull ? 'bg-red-50 text-red-655' : 'bg-slate-100 text-slate-655'
+                    }`}>
+                      {pct}% Full
+                    </span>
+                  </div>
+
+                  {/* Visual Capacity Fill Meter */}
+                  <div className="space-y-1">
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200">
+                      <div 
+                        className={`h-full transition-all duration-300 ${isFull ? 'bg-red-500' : 'bg-indigo-600'}`}
+                        style={{ width: `${pct}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-[9px] text-slate-400 font-bold">
+                      <span>{currentWeight} kg</span>
+                      <span>Max: {driver.maxCapacity} kg</span>
+                    </div>
+                  </div>
+
+                  {/* Assign Next button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      assignNextJob(driver.id);
+                    }}
+                    disabled={unassignedMovements.length === 0}
+                    className="w-full mt-1 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-black border border-slate-200 rounded-lg text-[10px] uppercase tracking-wider transition-all disabled:opacity-30 disabled:pointer-events-none active:scale-95 cursor-pointer min-h-[36px]"
+                  >
+                    Assign Next Job
+                  </button>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200">
-                  <div 
-                    className={`h-full transition-all duration-500 ${isLow ? 'bg-red-500' : 'bg-indigo-600'}`}
-                    style={{ width: `${stats.pct}%` }}
-                  ></div>
+
+                {/* Stacks visually in swimlane */}
+                <div className="flex-1 overflow-y-auto py-3 space-y-2.5 min-h-[200px]">
+                  {assignedJobs.length === 0 ? (
+                    <div className="h-full flex items-center justify-center border-2 border-dashed border-slate-200 rounded-xl p-4 text-center">
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Drag jobs here or tap column to assign</p>
+                    </div>
+                  ) : (
+                    <Reorder.Group axis="y" values={assignedJobs} onReorder={(reordered) => reorderDriverJobs(driver.id, reordered)} className="space-y-2.5 list-none m-0 p-0">
+                      {assignedJobs.map((mov, index) => {
+                        const isDelivery = mov.type === 'outbound';
+                        const addrWords = mov.siteAddress.split(',');
+                        const postcode = addrWords[addrWords.length - 1]?.trim() || 'Zone 1';
+
+                        return (
+                          <Reorder.Item
+                            key={mov.id}
+                            value={mov}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedMovement(mov);
+                            }}
+                            className={`flex flex-col justify-between bg-white border border-slate-200 rounded-lg p-3 min-h-[90px] shadow-sm hover:border-slate-350 active:scale-98 transition-all cursor-pointer relative ${
+                              isDelivery ? 'border-l-4 border-l-blue-500' : 'border-l-4 border-l-emerald-500'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start gap-1">
+                              <div className="min-w-0">
+                                <h5 className="text-xs font-black text-slate-900 truncate leading-tight">{mov.machineName}</h5>
+                                <p className="text-[10px] text-slate-600 font-bold truncate mt-0.5">{mov.customerName} • {postcode}</p>
+                              </div>
+                              
+                              {/* Unassign button (x) */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  assignDriver(mov.id, undefined);
+                                }}
+                                className="p-0.5 hover:bg-slate-100 text-slate-400 hover:text-slate-655 rounded transition-colors cursor-pointer"
+                                title="Unassign job"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="flex justify-between items-center pt-1.5 border-t border-slate-100 mt-1.5">
+                              {renderStatus(mov)}
+                              
+                              {/* Reorder Arrows directly on card */}
+                              <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => moveJob(mov.id, 'up')}
+                                  disabled={index === 0}
+                                  className="w-5 h-5 flex items-center justify-center bg-slate-50 hover:bg-slate-100 border border-slate-200 text-[8px] text-slate-600 rounded disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-all cursor-pointer"
+                                  title="Move Up"
+                                >
+                                  ▲
+                                </button>
+                                <button
+                                  onClick={() => moveJob(mov.id, 'down')}
+                                  disabled={index === assignedJobs.length - 1}
+                                  className="w-5 h-5 flex items-center justify-center bg-slate-50 hover:bg-slate-100 border border-slate-200 text-[8px] text-slate-600 rounded disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-all cursor-pointer"
+                                  title="Move Down"
+                                >
+                                  ▼
+                                </button>
+                              </div>
+                            </div>
+                          </Reorder.Item>
+                        );
+                      })}
+                    </Reorder.Group>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
-      </details>
-
-      {/* Filter Chips */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none select-none">
-        {[
-          { key: 'all', label: 'All' },
-          { key: 'morning', label: 'Morning' },
-          { key: 'afternoon', label: 'Afternoon' },
-          { key: 'attention', label: 'Needs attention' }
-        ].map(filter => {
-          const count = filterCounts[filter.key as keyof typeof filterCounts];
-          const isActive = filterSlot === filter.key;
-          return (
-            <button
-              key={filter.key}
-              onClick={() => setFilterSlot(filter.key as any)}
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all shrink-0 border uppercase tracking-wider focus-visible:ring-3 focus-visible:ring-indigo-500 outline-none ${
-                isActive
-                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {filter.label} <span className={`text-[10px] ml-1 px-1.5 py-0.2 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{count}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Today's Deliveries List */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider pl-2 border-l-4 border-indigo-600">Today's deliveries</h3>
-          <span className="text-[9px] bg-slate-100 border border-slate-200 text-slate-500 px-2 py-0.5 rounded font-black uppercase tracking-wider">Drag to reorder</span>
-        </div>
-
-        {filteredMovements.length === 0 ? (
-          <div className="text-slate-400 text-xs font-bold py-6 text-center uppercase tracking-wide">No deliveries found</div>
-        ) : (
-          <Reorder.Group axis="y" values={filteredMovements} onReorder={setMovements} className="space-y-3 list-none m-0 p-0">
-            {filteredMovements.map((mov, index) => {
-              const isAM = mov.deliveryWindow.includes('Morning');
-              
-              return (
-                <Reorder.Item 
-                  key={mov.id} 
-                  value={mov}
-                  onClick={() => setSelectedMovement(mov)}
-                  className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-4 gap-3 transition-colors hover:border-slate-350 hover:bg-slate-100 cursor-pointer relative"
-                  whileDrag={{ scale: 1.01, boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
-                >
-                  {/* Drag handle */}
-                  <div 
-                    className="flex items-center text-slate-400 hover:text-slate-655 cursor-grab active:cursor-grabbing p-2"
-                    onClick={(e) => e.stopPropagation()} // stop modal trigger when dragging
-                  >
-                    <GripVertical className="w-5 h-5" />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                      {renderStatus(mov)}
-                      <span className="text-[9px] font-bold text-slate-500 bg-slate-200/60 px-1.5 py-0.2 rounded border border-slate-300 uppercase tracking-wide">
-                        {isAM ? '☀️ Morning' : '🌤️ Afternoon'}
-                      </span>
-                    </div>
-                    {/* Plain Language name as primary label */}
-                    <h4 className="text-sm font-black text-slate-900 leading-snug">{mov.machineName}</h4>
-                    <p className="text-xs font-bold text-slate-600 mt-1 leading-normal">Site: {mov.siteAddress}</p>
-                    <p className="text-[11px] text-slate-500">Client: {mov.customerName}</p>
-                  </div>
-
-                  {/* Reorder & Swap actions */}
-                  <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button 
-                      onClick={() => toggleMovementSlot(mov.id)}
-                      className="px-2.5 py-2 bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-55 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer min-h-[44px]"
-                      title={isAM ? 'Move to Afternoon' : 'Move to Morning'}
-                    >
-                      {isAM ? 'Move to PM' : 'Move to AM'}
-                    </button>
-
-                    {/* Standalone Up/Down Arrow reorder targets */}
-                    <div className="flex flex-col gap-1">
-                      <button 
-                        onClick={() => moveMovementById(mov.id, 'up')}
-                        disabled={index === 0}
-                        className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-all cursor-pointer"
-                        title="Move Up"
-                        aria-label="Move Up"
-                      >
-                        ▲
-                      </button>
-                      <button 
-                        onClick={() => moveMovementById(mov.id, 'down')}
-                        disabled={index === filteredMovements.length - 1}
-                        className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-all cursor-pointer"
-                        title="Move Down"
-                        aria-label="Move Down"
-                      >
-                        ▼
-                      </button>
-                    </div>
-                  </div>
-                </Reorder.Item>
-              );
-            })}
-          </Reorder.Group>
-        )}
       </div>
 
       {/* Unified Primary CTA Footer (Fixed bottom) */}
@@ -518,13 +680,13 @@ export default function OperatorDashboard() {
             </button>
             <Link 
               to="/operator/fleet" 
-              className="flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2 rounded-xl text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all uppercase tracking-wide text-center"
+              className="flex-1 bg-white border border-slate-200 hover:bg-slate-55 text-slate-700 font-bold py-2 rounded-xl text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all uppercase tracking-wide text-center"
             >
               <ClipboardList className="w-3.5 h-3.5 text-indigo-500" /> Live Fleet
             </Link>
             <Link 
               to="/operator/hires" 
-              className="flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2 rounded-xl text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all uppercase tracking-wide text-center"
+              className="flex-1 bg-white border border-slate-200 hover:bg-slate-55 text-slate-700 font-bold py-2 rounded-xl text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all uppercase tracking-wide text-center"
             >
               <ListTodo className="w-3.5 h-3.5 text-orange-500" /> Active Hires
             </Link>
