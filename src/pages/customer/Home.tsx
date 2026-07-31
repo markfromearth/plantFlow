@@ -138,12 +138,22 @@ export default function CustomerHome() {
   useDocumentTitle("Hire Equipment");
   const [searchQuery, setSearchQuery] = useState('');
 
+  const quickJobs = useMemo(() => [
+    { label: '🌳 Garden Clearing', query: 'landscaping' },
+    { label: '🧱 Dig Foundations', query: 'foundations' },
+    { label: '🚘 Level Driveway', query: 'driveways' },
+    { label: '🔨 Break Concrete', query: 'breaker' },
+    { label: '🪜 Reach High', query: 'access' },
+    { label: '🪵 Floor Sanding', query: 'sander' }
+  ], []);
+
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
     return INITIAL_EQUIPMENT.filter(item => 
       item.name.toLowerCase().includes(query) || 
-      item.category.toLowerCase().includes(query)
+      item.category.toLowerCase().includes(query) ||
+      (item.job_fit && item.job_fit.toLowerCase().includes(query))
     ).slice(0, 5);
   }, [searchQuery]);
 
@@ -217,6 +227,37 @@ export default function CustomerHome() {
               </div>
             )}
           </div>
+
+          {/* Quick Pick Chips (B2B Task-fit Optimization) */}
+          <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center">
+            <span className="text-[10px] font-black text-indigo-250 uppercase tracking-widest shrink-0">Quick Job Finder:</span>
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 select-none">
+              {quickJobs.map(job => {
+                const isActive = searchQuery === job.query;
+                return (
+                  <button
+                    key={job.label}
+                    onClick={() => setSearchQuery(job.query)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 border ${
+                      isActive 
+                        ? 'bg-white text-indigo-700 border-white shadow-sm'
+                        : 'bg-indigo-800 border-indigo-650 hover:border-indigo-400 text-white'
+                    }`}
+                  >
+                    {job.label}
+                  </button>
+                );
+              })}
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="px-2.5 py-1.5 rounded-full text-xs font-extrabold bg-red-650/20 text-red-200 border border-red-500/30 hover:bg-red-650/40 hover:text-white transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                >
+                  Clear ✕
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -227,7 +268,7 @@ export default function CustomerHome() {
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">8 Types</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {CATEGORIES.map((category) => (
             <a 
               key={category.id} 
@@ -242,14 +283,14 @@ export default function CustomerHome() {
                   document.getElementById(category.id)?.scrollIntoView({ behavior: 'smooth' });
                 }
               }}
-              className="group relative flex flex-col rounded-xl overflow-hidden h-26 sm:h-28 bg-slate-200 border border-slate-300 hover:border-indigo-600 transition-all cursor-pointer select-none m3-card focus-visible:ring-3 focus-visible:ring-indigo-500"
+              className="group relative flex flex-col rounded-2xl overflow-hidden aspect-square bg-slate-100 border border-slate-200 hover:border-indigo-500 hover:shadow-md transition-all duration-300 cursor-pointer select-none focus-visible:ring-3 focus-visible:ring-indigo-500"
             >
               {/* Background Image */}
               <div className="absolute inset-0 w-full h-full">
                 <img 
                   src={category.image} 
-                  alt={category.label} 
-                  className="w-full h-full object-cover brightness-[0.55] group-hover:scale-102 transition-transform duration-300" 
+                  alt={category.name} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                   onError={(e) => {
                     e.currentTarget.onerror = null;
                     e.currentTarget.src = '/images/mini_digger_1781357985087.webp';
@@ -257,30 +298,15 @@ export default function CustomerHome() {
                 />
               </div>
               
-              {/* Strong High Contrast Dark Overlay */}
-              <div className="absolute inset-0 bg-black/35 group-hover:bg-black/45 transition-colors duration-300"></div>
+              {/* Subtle ambient shadow overlay */}
+              <div className="absolute inset-0 bg-black/5 group-hover:bg-black/15 transition-colors duration-300"></div>
 
-              {/* Label & Spec block */}
-              <div className="absolute inset-0 p-2.5 flex flex-col justify-between z-20">
-                {/* Title & Available Sub-sizes */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-white font-extrabold leading-tight text-xs sm:text-sm tracking-tight drop-shadow">
-                    {category.label}
-                  </span>
-                  <span className="text-[9px] sm:text-[10px] text-slate-300 font-bold leading-normal tracking-wide truncate">
-                    {category.subSizes}
-                  </span>
-                </div>
-                
-                {/* Key Spec attribute & Arrow */}
-                <div className="w-full flex items-end justify-between gap-1 mt-auto">
-                  <span className="text-[10px] sm:text-xs text-indigo-300 font-extrabold tracking-wide uppercase truncate drop-shadow-sm">
-                    {category.attribute}
-                  </span>
-                  <div className="bg-indigo-600/90 text-white rounded p-0.5 group-hover:bg-indigo-500 shrink-0 transition-colors">
-                    <ChevronRight className="w-3 h-3 text-white" />
-                  </div>
-                </div>
+              {/* Theme-compliant floating label pill (matches reference mockup exactly and scales across light/dark modes) */}
+              <div className="absolute bottom-3 left-3 right-3 category-pill backdrop-blur-[2px] rounded-xl px-3 py-3 flex justify-between items-center shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-all duration-300 group-hover:translate-y-[-1px] z-20">
+                <span className="font-extrabold text-xs sm:text-sm tracking-tight truncate">
+                  {category.name}
+                </span>
+                <ChevronRight className="w-4 h-4 shrink-0 ml-1 opacity-80" />
               </div>
             </a>
           ))}

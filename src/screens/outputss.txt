@@ -1,0 +1,81 @@
+=== File: ./operator/OperatorHome.tsx ===
+import React from 'react';
+import { CategoryGrid } from '../../components/CategoryGrid';
+
+export default function OperatorHome() {
+  return (
+    <div className="operator-home">
+      <section className="mb-8">
+        <h1 className="text-2xl font-bold text-white mb-2">
+          Equipment Categories
+        </h1>
+        <p className="text-gray-300 mb-4">
+          Manage your inventory by category.
+        </p>
+
+        <CategoryGrid />
+      </section>
+    </div>
+  );
+}
+
+=== File: ./operator/OperatorCategories.tsx ===
+import React from 'react';
+import { CategoryGrid } from '../../components/CategoryGrid';
+
+export const OperatorCategories = () => {
+  return (
+    <div className="operator-categories-screen">
+      <header className="px-4 py-3 border-b border-gray-800 bg-gray-900 text-white">
+        <h1 className="text-xl font-bold">Equipment Categories</h1>
+        <p className="text-sm opacity-70">Manage your inventory by category</p>
+      </header>
+
+      <main className="p-4">
+        <CategoryGrid />
+      </main>
+    </div>
+  );
+};
+
+=== File: ./customer/CustomerCategories.tsx ===
+import React from 'react';
+import { CategoryGrid } from '../../components/CategoryGrid';
+
+export const CustomerCategories = () => {
+  return (
+    <div className="customer-categories-screen">
+      <header className="px-4 py-3 border-b border-blue-900 bg-blue-950 text-white">
+        <h1 className="text-xl font-bold">Browse Categories</h1>
+        <p className="text-sm opacity-80">Find the equipment you need</p>
+      </header>
+
+      <main className="p-4">
+        <CategoryGrid />
+      </main>
+    </div>
+  );
+};
+
+=== File: ./customer/home.tsx ===
+import React from 'react';
+import { CategoryGrid } from '../../components/CategoryGrid';
+
+export default function CustomerHome() {
+  return (
+    <div className="customer-home">
+      <section className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">
+          Browse Equipment Categories
+        </h1>
+        <p className="text-slate-600 mb-4">
+          Select a category to explore available equipment.
+        </p>
+
+        <CategoryGrid />
+      </section>
+    </div>
+  );
+}
+
+

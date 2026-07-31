@@ -12,7 +12,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 30,
     availability_status: 'available',
     compliance_expiry: '2027-05-10',
-    image_url: '/images/mini_digger_1781357985087.webp',
+    image_url: '/images/ex_015_kubota.jpg',
     notes: 'Tracks extendable. Comes with 3 buckets.'
   },
   {
@@ -25,7 +25,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 45,
     availability_status: 'hired',
     compliance_expiry: '2027-01-15',
-    image_url: '/images/three_tonne_digger_1781358002768.webp',
+    image_url: '/images/ex_030_kubota.jpg',
     notes: 'Cabbed, quick hitch. Check track tension.'
   },
   {
@@ -38,7 +38,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 30,
     availability_status: 'available',
     compliance_expiry: '2027-08-20',
-    image_url: '/images/mini_digger_1781357985087.webp',
+    image_url: '/images/ex_008_kubota.jpg',
     notes: 'Fits through standard doors. Retractable tracks.'
   },
   {
@@ -51,7 +51,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 60,
     availability_status: 'available',
     compliance_expiry: '2028-02-12',
-    image_url: '/images/three_tonne_digger_1781358002768.webp',
+    image_url: '/images/ex_050_kubota.jpg',
     notes: 'Zero tail swing. Piped for breaker.'
   },
   {
@@ -64,7 +64,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 80,
     availability_status: 'available',
     compliance_expiry: '2027-11-05',
-    image_url: '/images/mini_digger_1781357985087.webp',
+    image_url: '/images/ex_080_kubota.jpg',
     notes: 'Includes hydraulic quick hitch.'
   },
   {
@@ -77,7 +77,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 35,
     availability_status: 'available',
     compliance_expiry: '2027-06-30',
-    image_url: '/images/three_tonne_digger_1781358002768.webp',
+    image_url: '/images/ex_190_jcb.jpg',
     notes: 'Lithium-ion battery. Fast charger included.'
   },
 
@@ -92,7 +92,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 30,
     availability_status: 'available',
     compliance_expiry: '2026-11-20',
-    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    image_url: '/images/du_010_thwaites.jpg',
     notes: 'Hydrostatic drive. Wash skip before return.'
   },
   {
@@ -105,7 +105,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 40,
     availability_status: 'available',
     compliance_expiry: '2027-03-10',
-    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    image_url: '/images/du_030_thwaites.jpg',
     notes: '4WD. ROPs bar folding.'
   },
   {
@@ -118,7 +118,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 60,
     availability_status: 'hired',
     compliance_expiry: '2027-04-15',
-    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    image_url: '/images/du_060_thwaites.jpg',
     notes: 'Swivel skip mechanism.'
   },
   {
@@ -131,7 +131,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 80,
     availability_status: 'available',
     compliance_expiry: '2027-05-22',
-    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    image_url: '/images/du_090_thwaites.jpg',
     notes: 'Heavy duty. Daily checks crucial.'
   },
   {
@@ -144,7 +144,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 25,
     availability_status: 'available',
     compliance_expiry: '2028-01-30',
-    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    image_url: '/images/du_005_jcb.jpg',
     notes: 'Walk-behind. Great terrain capabilities.'
   },
   {
@@ -157,7 +157,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 35,
     availability_status: 'maintenance',
     compliance_expiry: '2026-06-18',
-    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    image_url: '/images/du_100_hinowa.jpg',
     notes: 'Ride-on plate. Clean tracks before return.'
   },
 
@@ -172,7 +172,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 15,
     availability_status: 'maintenance',
     compliance_expiry: '2026-08-05',
-    image_url: '/images/wacker_plate_1781358033267.webp',
+    image_url: '/images/co_350_belle.jpg',
     notes: 'Petrol, pull start needs checking. Include rubber mat.'
   },
   {
@@ -185,7 +185,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 25,
     availability_status: 'available',
     compliance_expiry: '2027-05-20',
-    image_url: '/images/trench_rammer_1781358358836.webp',
+    image_url: '/images/co_100_belle.jpg',
     notes: '4-stroke. Check jumping shoe.'
   },
   {
@@ -198,7 +198,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 25,
     availability_status: 'available',
     compliance_expiry: '2028-02-14',
-    image_url: '/images/wacker_plate_1781358033267.webp',
+    image_url: '/images/co_500_belle.jpg',
     notes: 'Heavy weight. 2-person lift or ramp access.'
   },
   {
@@ -211,7 +211,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 45,
     availability_status: 'available',
     compliance_expiry: '2027-09-10',
-    image_url: '/images/trench_rammer_1781358358836.webp',
+    image_url: '/images/co_080_bomag.jpg',
     notes: 'Includes water spray system.'
   },
   {
@@ -224,7 +224,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 60,
     availability_status: 'hired',
     compliance_expiry: '2026-12-01',
-    image_url: '/images/wacker_plate_1781358033267.webp',
+    image_url: '/images/co_120_bomag.jpg',
     notes: 'Diesel. Foldable ROPs.'
   },
   {
@@ -237,7 +237,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 30,
     availability_status: 'available',
     compliance_expiry: '2027-11-15',
-    image_url: '/images/trench_rammer_1781358358836.webp',
+    image_url: '/images/co_150_bomag.jpg',
     notes: 'Walk behind setup. Heavy-duty traction.'
   },
 
@@ -252,7 +252,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 35,
     availability_status: 'available',
     compliance_expiry: '2027-03-12',
-    image_url: '/images/trencher_1781358047416.webp',
+    image_url: '/images/gr_100_barreto.jpg',
     notes: 'Cuts up to 600mm deep. Check chain sharpness.'
   },
   {
@@ -265,7 +265,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 40,
     availability_status: 'available',
     compliance_expiry: '2027-04-18',
-    image_url: '/images/post_hole_borer_1781358269135.webp',
+    image_url: '/images/gr_200_predator.jpg',
     notes: 'Check cutting teeth. Offer safety visor.'
   },
   {
@@ -278,7 +278,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 50,
     availability_status: 'hired',
     compliance_expiry: '2026-09-22',
-    image_url: '/images/stump_grinder_1781358210749.webp',
+    image_url: '/images/gr_300_timberwolf.jpg',
     notes: 'Towed unit. Ensure customer has correct tow ball.'
   },
   {
@@ -291,7 +291,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 20,
     availability_status: 'maintenance',
     compliance_expiry: '2026-07-20',
-    image_url: '/images/wood_chipper_1781358225040.webp',
+    image_url: '/images/gr_400_stihl.jpg',
     notes: 'Two-person operation. Auger bits available separating.'
   },
   {
@@ -304,7 +304,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 25,
     availability_status: 'available',
     compliance_expiry: '2027-09-30',
-    image_url: '/images/trencher_1781358047416.webp',
+    image_url: '/images/gr_500_barreto.jpg',
     notes: 'Hydraulically driven tines. Easy speed selection.'
   },
   {
@@ -317,7 +317,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 25,
     availability_status: 'available',
     compliance_expiry: '2028-02-12',
-    image_url: '/images/post_hole_borer_1781358269135.webp',
+    image_url: '/images/gr_600_camon.jpg',
     notes: 'Depth adjustable. Four wheel drive.'
   },
 
@@ -332,7 +332,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 45,
     availability_status: 'available',
     compliance_expiry: '2026-12-05',
-    image_url: '/images/scissor_lift_1781358239898.webp',
+    image_url: '/images/ac_190_genie.jpg',
     notes: 'Battery powered. Charge fully before dispatch. Non-marking tyres.'
   },
   {
@@ -345,7 +345,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 25,
     availability_status: 'available',
     compliance_expiry: '2028-01-10',
-    image_url: '/images/alloy_tower_1781358254196.webp',
+    image_url: '/images/ac_040_boss.jpg',
     notes: 'Double width. Check all bracing clips.'
   },
   {
@@ -358,7 +358,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 50,
     availability_status: 'available',
     compliance_expiry: '2027-03-22',
-    image_url: '/images/scissor_lift_1781358239898.webp',
+    image_url: '/images/ac_260_genie.jpg',
     notes: 'Provides extra height for high bays.'
   },
   {
@@ -371,7 +371,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 70,
     availability_status: 'hired',
     compliance_expiry: '2027-10-18',
-    image_url: '/images/alloy_tower_1781358254196.webp',
+    image_url: '/images/ac_320_genie.jpg',
     notes: '4WD. Auto-levelling outriggers.'
   },
   {
@@ -384,7 +384,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 90,
     availability_status: 'available',
     compliance_expiry: '2027-08-30',
-    image_url: '/images/scissor_lift_1781358239898.webp',
+    image_url: '/images/ac_450_niftylift.jpg',
     notes: 'Diesel. Harness compliance mandatory.'
   },
   {
@@ -397,7 +397,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 25,
     availability_status: 'available',
     compliance_expiry: '2028-04-12',
-    image_url: '/images/alloy_tower_1781358254196.webp',
+    image_url: '/images/ac_100_popup.jpg',
     notes: 'Manual push. Battery powered lift.'
   },
 
@@ -412,7 +412,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 20,
     availability_status: 'hired',
     compliance_expiry: '2026-08-14',
-    image_url: '/images/generator_3kva_1781358330592.webp',
+    image_url: '/images/po_003_honda.jpg',
     notes: 'Dual 110V/240V outputs. Petrol. Check oil level.'
   },
   {
@@ -425,7 +425,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 30,
     availability_status: 'available',
     compliance_expiry: '2028-02-14',
-    image_url: '/images/generator_3kva_1781358330592.webp',
+    image_url: '/images/po_006_pramac.jpg',
     notes: 'Electric start. Includes trolley kit.'
   },
   {
@@ -438,7 +438,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 50,
     availability_status: 'available',
     compliance_expiry: '2027-09-02',
-    image_url: '/images/generator_3kva_1781358330592.webp',
+    image_url: '/images/po_010_stephill.jpg',
     notes: 'Diesel. Ultra-quiet canopy design.'
   },
   {
@@ -451,7 +451,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 40,
     availability_status: 'available',
     compliance_expiry: '2026-11-20',
-    image_url: '/images/generator_3kva_1781358330592.webp',
+    image_url: '/images/po_500_smc.jpg',
     notes: 'Mast extends to 5m. Eco run.'
   },
   {
@@ -464,7 +464,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 10,
     availability_status: 'available',
     compliance_expiry: '2029-01-01',
-    image_url: '/images/generator_3kva_1781358330592.webp',
+    image_url: '/images/po_110_defender.jpg',
     notes: 'Individually PAT tested.'
   },
   {
@@ -477,7 +477,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 15,
     availability_status: 'available',
     compliance_expiry: '2028-05-30',
-    image_url: '/images/generator_3kva_1781358330592.webp',
+    image_url: '/images/po_200_ecoflow.jpg',
     notes: 'Emissions free. Silent operation.'
   },
 
@@ -492,7 +492,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 20,
     availability_status: 'available',
     compliance_expiry: '2026-09-05',
-    image_url: '/images/breaker_110v_1781358344746.webp',
+    image_url: '/images/br_027_bosch.jpg',
     notes: 'Requires 110V transformer. Include pointed and flat chisels.'
   },
   {
@@ -505,7 +505,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 15,
     availability_status: 'available',
     compliance_expiry: '2027-10-12',
-    image_url: '/images/breaker_110v_1781358344746.webp',
+    image_url: '/images/br_012_makita.jpg',
     notes: 'Lighter weight for wall work. Check bits.'
   },
   {
@@ -518,7 +518,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 30,
     availability_status: 'available',
     compliance_expiry: '2028-03-21',
-    image_url: '/images/breaker_110v_1781358344746.webp',
+    image_url: '/images/br_100_jcb.jpg',
     notes: 'Petrol pack with hoses and high power gun.'
   },
   {
@@ -531,7 +531,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 15,
     availability_status: 'hired',
     compliance_expiry: '2026-08-30',
-    image_url: '/images/breaker_110v_1781358344746.webp',
+    image_url: '/images/br_410_stihl.jpg',
     notes: '2-stroke. Sell diamond blades and PPE.'
   },
   {
@@ -544,7 +544,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 35,
     availability_status: 'available',
     compliance_expiry: '2027-11-19',
-    image_url: '/images/breaker_110v_1781358344746.webp',
+    image_url: '/images/br_200_vonarx.jpg',
     notes: 'Petrol powered. TCT flails charge separately.'
   },
   {
@@ -557,7 +557,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 15,
     availability_status: 'available',
     compliance_expiry: '2029-02-15',
-    image_url: '/images/breaker_110v_1781358344746.webp',
+    image_url: '/images/br_045_bosch.jpg',
     notes: 'Check drill bits availability.'
   },
 
@@ -572,7 +572,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 20,
     availability_status: 'available',
     compliance_expiry: '2026-11-15',
-    image_url: '/images/carpet_cleaner_1781358295224.webp',
+    image_url: '/images/fl_240_hiretech.jpg',
     notes: 'Remind customer about dust bags and sanding sheets.'
   },
   {
@@ -585,7 +585,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 15,
     availability_status: 'available',
     compliance_expiry: '2027-02-28',
-    image_url: '/images/floor_sander_1781358280768.webp',
+    image_url: '/images/fl_100_karcher.jpg',
     notes: 'Include upholstery tool. Sell cleaning fluid separately.'
   },
   {
@@ -598,7 +598,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 15,
     availability_status: 'available',
     compliance_expiry: '2028-05-18',
-    image_url: '/images/carpet_cleaner_1781358295224.webp',
+    image_url: '/images/fl_007_hiretech.jpg',
     notes: 'Often hired with main 240V floor sander.'
   },
   {
@@ -611,7 +611,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 15,
     availability_status: 'available',
     compliance_expiry: '2027-08-11',
-    image_url: '/images/floor_sander_1781358280768.webp',
+    image_url: '/images/fl_900_numatic.jpg',
     notes: 'Wet/Dry capabilities. Check filters.'
   },
   {
@@ -624,7 +624,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 20,
     availability_status: 'hired',
     compliance_expiry: '2028-03-09',
-    image_url: '/images/carpet_cleaner_1781358295224.webp',
+    image_url: '/images/fl_400_nilfisk.jpg',
     notes: 'Sell appropriate cleaning pads (red, green, black).'
   },
   {
@@ -637,7 +637,7 @@ export const INITIAL_EQUIPMENT: Equipment[] = [
     delivery_rate: 25,
     availability_status: 'available',
     compliance_expiry: '2026-10-31',
-    image_url: '/images/floor_sander_1781358280768.webp',
+    image_url: '/images/fl_300_wolff.jpg',
     notes: 'Check blade sharpness before dispatch.'
   }
 ];

@@ -1,0 +1,1635 @@
+=== File: ./App.tsx ===
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import CustomerRoutes from './components/CustomerRoutes';
+import OperatorRoutes from './components/OperatorRoutes';
+import { useStore } from './store';
+
+export default function App() {
+  const { init } = useStore();
+
+  useEffect(() => {
+    init();
+  }, []);
+
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={<Navigate to="/customer" replace />} />
+        <Route path="/operator/*" element={<OperatorRoutes />} />
+        <Route path="/customer/*" element={<CustomerRoutes />} />
+      </Routes>
+    </>
+  );
+}
+
+=== File: ./main.tsx ===
+import {StrictMode} from 'react';
+import {createRoot} from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App.tsx';
+import { StoreProvider } from './store.tsx';
+import './index.css';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <StoreProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </StoreProvider>
+  </StrictMode>,
+);
+
+=== File: ./store.tsx ===
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { Equipment, Booking, EquipmentStatus, BookingStatus } from './types';
+import { INITIAL_EQUIPMENT, INITIAL_BOOKINGS } from './mockData';
+import { addEquipment as dbAddEquipment, updateEquipmentStatus as dbUpdateEquipmentStatus, listEquipment as dbListEquipment } from './equipmentService';
+import { createBooking as dbCreateBooking, updateBookingStatus as dbUpdateBookingStatus, listBookings as dbListBookings } from './bookingService';
+
+interface StoreState {
+  equipment: Equipment[];
+  bookings: Booking[];
+  highVisMode: boolean;
+  isLoadingEquipment: boolean;
+  isLoadingBookings: boolean;
+  errorEquipment: string | null;
+  errorBookings: string | null;
+}
+
+interface StoreContextType extends StoreState {
+  addBooking: (booking: Booking) => Promise<void>;
+  updateBookingStatus: (id: string, status: BookingStatus) => void;
+  updateEquipmentStatus: (id: string, status: EquipmentStatus) => void;
+  addEquipment: (equipment: Equipment) => void;
+  startHire: (id: string) => void;
+  endHire: (id: string) => void;
+  toggleHighVisMode: () => void;
+  init: () => Promise<void>;
+}
+
+const StoreContext = createContext<StoreContextType | undefined>(undefined);
+
+export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [equipment, setEquipment] = useState<Equipment[]>(INITIAL_EQUIPMENT);
+  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
+  const [highVisMode, setHighVisMode] = useState(false);
+  const [isLoadingEquipment, setIsLoadingEquipment] = useState(false);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+  const [errorEquipment, setErrorEquipment] = useState<string | null>(null);
+  const [errorBookings, setErrorBookings] = useState<string | null>(null);
+
+  const init = async () => {
+    setIsLoadingEquipment(true);
+    setIsLoadingBookings(true);
+    setErrorEquipment(null);
+    setErrorBookings(null);
+
+    try {
+      const equips = await dbListEquipment();
+      if (equips.length > 0) {
+        setEquipment(equips);
+      }
+    } catch (e: any) {
+      console.warn("Firebase list equipment failed, falling back to local data.", e.message);
+      // We don't set errorEquipment so the UI doesn't show an error state
+    } finally {
+      setIsLoadingEquipment(false);
+    }
+
+    try {
+      const dbBookings = await dbListBookings();
+      if (dbBookings.length > 0) {
+        setBookings(dbBookings);
+      }
+    } catch (e: any) {
+      console.warn("Firebase list bookings failed, falling back to local data.", e.message);
+      // We don't set errorBookings so the UI doesn't show an error state
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  };
+
+  const toggleHighVisMode = () => setHighVisMode(prev => !prev);
+
+
+  const addBooking = async (booking: Booking) => {
+    setIsLoadingBookings(true);
+    setErrorBookings(null);
+    try {
+      const payload: Omit<Booking, 'booking_id' | 'timestamp_created'> = {
+        machine_id: booking.machine_id,
+        hirer_name: booking.hirer_name,
+        hirer_phone: booking.hirer_phone,
+        hirer_email: booking.hirer_email,
+        site_address: booking.site_address,
+        start_date: booking.start_date,
+        end_date: booking.end_date,
+        delivery_window: booking.delivery_window,
+        status: booking.status,
+        qr_start_code: booking.qr_start_code,
+        qr_end_code: booking.qr_end_code,
+        totalCost: booking.totalCost,
+        deliveryNeeded: booking.deliveryNeeded
+      };
+      
+      const newBooking = await dbCreateBooking(payload);
+      setBookings(prev => [...prev, newBooking]);
+    } catch (e: any) {
+      console.error("Firebase add booking failed:", e.message);
+      setErrorBookings(e.message || "Failed to add booking");
+      throw e;
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  };
+
+  const updateBookingStatus = async (id: string, status: BookingStatus) => {
+    setIsLoadingBookings(true);
+    setErrorBookings(null);
+    try {
+      await dbUpdateBookingStatus(id, status);
+    } catch (e: any) {
+      console.warn("Firebase update booking status failed, updating local state only.", e.message);
+    } finally {
+      setBookings(prev => prev.map(b => b.booking_id === id ? { ...b, status } : b));
+      setIsLoadingBookings(false);
+    }
+  };
+
+  const updateEquipmentStatus = async (id: string, status: EquipmentStatus) => {
+    setIsLoadingEquipment(true);
+    setErrorEquipment(null);
+    try {
+      await dbUpdateEquipmentStatus(id, status);
+    } catch (e: any) {
+      console.warn("Firebase update equipment status failed, updating local state only.", e.message);
+    } finally {
+      setEquipment(prev => prev.map(e => e.machine_id === id ? { ...e, availability_status: status } : e));
+      setIsLoadingEquipment(false);
+    }
+  };
+
+  const addEquipment = async (equipment: Equipment) => {
+    setIsLoadingEquipment(true);
+    setErrorEquipment(null);
+    try {
+      const payload: Omit<Equipment, 'machine_id'> = {
+        name: equipment.name,
+        category: equipment.category,
+        job_fit: equipment.job_fit,
+        access_width_mm: equipment.access_width_mm,
+        day_rate: equipment.day_rate,
+        delivery_rate: equipment.delivery_rate,
+        availability_status: equipment.availability_status,
+        compliance_expiry: equipment.compliance_expiry,
+        image_url: equipment.image_url,
+        notes: equipment.notes
+      };
+      
+      const newEquip = await dbAddEquipment(payload);
+      setEquipment(prev => [...prev, newEquip]);
+    } catch (e: any) {
+      console.warn("Firebase add equipment failed, falling back to local state.", e.message);
+      const newEquip: Equipment = {
+        ...equipment,
+        machine_id: `mock-equip-${Date.now()}`,
+      };
+      setEquipment(prev => [...prev, newEquip]);
+    } finally {
+      setIsLoadingEquipment(false);
+    }
+  };
+
+  const startHire = async (id: string) => {
+    const booking = bookings.find(b => b.booking_id === id);
+    if (!booking) return;
+    
+    setIsLoadingBookings(true);
+    setErrorBookings(null);
+    try {
+      await dbUpdateBookingStatus(id, 'active');
+      await dbUpdateEquipmentStatus(booking.machine_id, 'hired');
+    } catch (e: any) {
+      console.warn("Firebase start hire failed, updating local state only.", e.message);
+    } finally {
+      setBookings(prev => prev.map(b => b.booking_id === id ? { ...b, status: 'active' } : b));
+      setEquipment(prev => prev.map(e => e.machine_id === booking.machine_id ? { ...e, availability_status: 'hired' } : e));
+      setIsLoadingBookings(false);
+    }
+  };
+
+  const endHire = async (id: string) => {
+    const booking = bookings.find(b => b.booking_id === id);
+    if (!booking) return;
+    
+    setIsLoadingBookings(true);
+    setErrorBookings(null);
+    try {
+      await dbUpdateBookingStatus(id, 'completed');
+      await dbUpdateEquipmentStatus(booking.machine_id, 'available');
+    } catch (e: any) {
+      console.warn("Firebase end hire failed, updating local state only.", e.message);
+    } finally {
+      setBookings(prev => prev.map(b => b.booking_id === id ? { ...b, status: 'completed' } : b));
+      setEquipment(prev => prev.map(e => e.machine_id === booking.machine_id ? { ...e, availability_status: 'available' } : e));
+      setIsLoadingBookings(false);
+    }
+  };
+
+  return (
+    <StoreContext.Provider value={{
+      equipment,
+      bookings,
+      highVisMode,
+      isLoadingEquipment,
+      isLoadingBookings,
+      errorEquipment,
+      errorBookings,
+      addBooking,
+      updateBookingStatus,
+      updateEquipmentStatus,
+      addEquipment,
+      startHire,
+      endHire,
+      toggleHighVisMode,
+      init
+    }}>
+      {children}
+    </StoreContext.Provider>
+  );
+};
+
+export const useStore = () => {
+  const context = useContext(StoreContext);
+  if (context === undefined) {
+    throw new Error('useStore must be used within a StoreProvider');
+  }
+  return context;
+};
+
+=== File: ./firebase.ts ===
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  UserCredential
+} from 'firebase/auth';
+
+import firebaseConfig from '../firebase-applet-config.json';
+
+// --- Initialise Firebase App ---
+const app = initializeApp(firebaseConfig);
+
+// --- Auth (Google only) ---
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+
+// Optional: force account selection every time
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// --- Firestore ---
+export const db = getFirestore(app);
+
+// --- Google Sign-In helper ---
+export async function googleSignIn(): Promise<UserCredential | null> {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result;
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error('Google sign-in failed:', err.message);
+    } else {
+      console.error('Google sign-in failed:', String(err));
+    }
+    return null;
+  }
+}
+
+// --- Logout ---
+export async function logout(): Promise<void> {
+  try {
+    await auth.signOut();
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error('Logout failed:', err.message);
+    } else {
+      console.error('Logout failed:', String(err));
+    }
+  }
+}
+
+=== File: ./constants/categoryImages.ts ===
+export const CATEGORY_IMAGES: Record<string, string> = {
+  'building-construction': '/assets/categories/building-construction.jpg',
+  'decorating-flooring': '/assets/categories/decorating-flooring.jpg',
+  'gardening-landscaping': '/assets/categories/gardening-landscaping.jpg',
+  'power-solutions': '/assets/categories/power-solutions.jpg',
+  'power-tools': '/assets/categories/power-tools.jpg',
+  'access-equipment': '/assets/categories/access-equipment.jpg',
+
+  default: '/assets/categories/default.jpg',
+};
+
+=== File: ./authService.ts ===
+import {
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  User,
+  signOut
+} from 'firebase/auth';
+
+import { auth, googleProvider } from './firebase';
+
+let isSigningIn = false;
+let cachedAccessToken: string | null = null;
+
+// Google-only auth listener
+export const initAuth = (
+  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthFailure?: () => void
+) => {
+  return onAuthStateChanged(auth, async (user: User | null) => {
+    if (user) {
+      // If we already have a cached token, use it
+      if (cachedAccessToken && onAuthSuccess) {
+        onAuthSuccess(user, cachedAccessToken);
+        return;
+      }
+
+      // Try to refresh the token from the current user
+      const token = await user.getIdToken();
+      cachedAccessToken = token;
+
+      if (onAuthSuccess) onAuthSuccess(user, token);
+    } else {
+      // No user signed in — Google login required
+      cachedAccessToken = null;
+      if (onAuthFailure) onAuthFailure();
+    }
+  });
+};
+
+export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
+  try {
+    isSigningIn = true;
+
+    const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+
+    if (!credential?.accessToken) {
+      throw new Error('Failed to get access token from Firebase Auth');
+    }
+
+    cachedAccessToken = credential.accessToken;
+
+    return { user: result.user, accessToken: cachedAccessToken };
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error('Sign in error:', err.message);
+    } else {
+      console.error('Sign in error:', String(err));
+    }
+    return null;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+export const getAccessToken = async (): Promise<string | null> => {
+  return cachedAccessToken;
+};
+
+export const logout = async () => {
+  await signOut(auth);
+  cachedAccessToken = null;
+};
+
+=== File: ./storageService.ts ===
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+export async function uploadEquipmentImage(file: File): Promise<string> {
+  const storage = getStorage();
+  const uuid = typeof crypto !== 'undefined' && crypto.randomUUID 
+    ? crypto.randomUUID() 
+    : Math.random().toString(36).substring(2, 15);
+    
+  const storageRef = ref(storage, `equipment/${uuid}`);
+  await uploadBytes(storageRef, file);
+  const downloadUrl = await getDownloadURL(storageRef);
+  return downloadUrl;
+}
+
+=== File: ./equipmentService.ts ===
+import { collection, doc, getDocs, getDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { db } from './firebase';
+import { Equipment, EquipmentStatus } from './types';
+
+// Your Firestore rules require tenant‑scoped collections.
+// This MUST match: /tenants/{tenantId}/inventory
+const TENANT_ID = 'plantflow-os';
+
+export async function listEquipment(): Promise<Equipment[]> {
+  const equipmentCol = collection(db, `tenants/${TENANT_ID}/inventory`);
+  const equipmentSnapshot = await getDocs(equipmentCol);
+
+  return equipmentSnapshot.docs.map(doc => ({
+    machine_id: doc.id,
+    ...doc.data()
+  }) as Equipment);
+}
+
+export async function getEquipment(id: string): Promise<Equipment | null> {
+  const equipmentDoc = doc(db, `tenants/${TENANT_ID}/inventory/${id}`);
+  const equipmentSnapshot = await getDoc(equipmentDoc);
+
+  if (!equipmentSnapshot.exists()) return null;
+
+  return {
+    machine_id: equipmentSnapshot.id,
+    ...equipmentSnapshot.data()
+  } as Equipment;
+}
+
+export async function addEquipment(payload: Omit<Equipment, 'machine_id'>): Promise<Equipment> {
+  const equipmentCol = collection(db, `tenants/${TENANT_ID}/inventory`);
+  const docRef = await addDoc(equipmentCol, payload);
+
+  return {
+    machine_id: docRef.id,
+    ...payload
+  } as Equipment;
+}
+
+export async function updateEquipmentStatus(id: string, availability_status: EquipmentStatus): Promise<void> {
+  const equipmentDoc = doc(db, `tenants/${TENANT_ID}/inventory/${id}`);
+  await updateDoc(equipmentDoc, { availability_status });
+}
+
+=== File: ./types.ts ===
+export type EquipmentStatus = 'available' | 'hired' | 'maintenance';
+
+export interface Equipment {
+  machine_id: string;
+  name: string;
+  category: string;
+  job_fit: string;
+  access_width_mm: number;
+  day_rate: number;
+  delivery_rate: number;
+  availability_status: EquipmentStatus;
+  compliance_expiry: string;
+  image_url: string;
+  notes: string;
+}
+
+export type BookingStatus = 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+
+export interface Booking {
+  booking_id: string;
+  machine_id: string;
+  hirer_name: string;
+  hirer_phone: string;
+  hirer_email: string;
+  site_address: string;
+  start_date: string;
+  end_date: string;
+  delivery_window: string;
+  status: BookingStatus;
+  qr_start_code: string;
+  qr_end_code: string;
+  timestamp_created: string;
+  totalCost: number;
+  deliveryNeeded: boolean;
+}
+=== File: ./components/CustomerRoutes.tsx ===
+import React from 'react';
+import { Routes, Route, Outlet, Link } from 'react-router-dom';
+import { HardHat } from 'lucide-react';
+import { ErrorBoundary } from './ErrorBoundary';
+
+import CustomerHome from '../pages/customer/Home';
+import CustomerEquipmentDetails from '../pages/customer/EquipmentDetails';
+import CustomerBookingSuccess from '../pages/customer/BookingSuccess';
+import QrDisplay from '../pages/customer/QrDisplay';
+
+const CustomerLayout = () => {
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <Link to="/customer" className="flex items-center gap-2">
+            <div className="bg-indigo-600 p-2 rounded-lg">
+              <HardHat className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-xl font-bold text-slate-900 tracking-tight">PlantFlow OS</span>
+          </Link>
+          <nav className="flex items-center gap-4">
+            <Link to="/customer" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Equipment</Link>
+            <div className="hidden sm:block">
+              <a href="tel:0800123456" className="text-sm font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-4 py-2 rounded-md transition-colors">
+                Call Us: 0800 123 456
+              </a>
+            </div>
+          </nav>
+        </div>
+      </header>
+      <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
+      </main>
+      <footer className="bg-slate-900 text-slate-400 py-12 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm">
+          &copy; {new Date().getFullYear()} PlantFlow OS Equipment Hire. All rights reserved.
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default function CustomerRoutes() {
+  return (
+    <Routes>
+      <Route element={<CustomerLayout />}>
+        <Route index element={<CustomerHome />} />
+        <Route path="equipment/:id" element={<CustomerEquipmentDetails />} />
+        <Route path="booking-success" element={<CustomerBookingSuccess />} />
+        <Route path="qr" element={<QrDisplay />} />
+      </Route>
+    </Routes>
+  );
+}
+
+
+=== File: ./components/CategoryGrid.tsx ===
+import React from 'react';
+import { CategoryCard } from './CategoryCard';
+
+const categories = [
+  { id: 'building-construction', label: 'Building & Construction' },
+  { id: 'decorating-flooring', label: 'Decorating & Flooring' },
+  { id: 'gardening-landscaping', label: 'Gardening & Landscaping' },
+  { id: 'power-solutions', label: 'Power Solutions' },
+  { id: 'power-tools', label: 'Power Tools' },
+  { id: 'access-equipment', label: 'Access Equipment' },
+];
+
+export const CategoryGrid = () => {
+  return (
+    <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-3 lg:grid-cols-4">
+      {categories.map(cat => (
+        <CategoryCard
+          key={cat.id}
+          category={cat.id}
+          label={cat.label}
+        />
+      ))}
+    </div>
+  );
+};
+
+
+=== File: ./components/CategoryCard.tsx ===
+import React from 'react';
+import { CATEGORY_IMAGES } from '../constants/categoryImages';
+
+interface Props {
+  category: string;
+  label: string;
+}
+
+export const CategoryCard: React.FC<Props> = ({ category, label }) => {
+  const imageSrc = CATEGORY_IMAGES[category] || CATEGORY_IMAGES.default;
+
+  return (
+    <div className="category-card">
+      <img
+        src={imageSrc}
+        alt={label}
+        className="category-image"
+        loading="lazy"
+      />
+      <div className="category-label">{label}</div>
+    </div>
+  );
+};
+
+=== File: ./components/OperatorRoutes.tsx ===
+import React, { useEffect, useState } from 'react';
+import { Routes, Route, Outlet, Link, useLocation } from 'react-router-dom';
+import { Home, ListTodo, QrCode, ClipboardList, Sun, SunDim, Terminal, LogIn } from 'lucide-react';
+import { ErrorBoundary } from './ErrorBoundary';
+import { initAuth, googleSignIn } from '../authService';
+import { User } from 'firebase/auth';
+
+import OperatorHome from '../pages/operator/OperatorHome';
+import HiresList from '../pages/operator/HiresList';
+import OperatorScan from '../pages/operator/Scan';
+import OperatorHireDetails from '../pages/operator/HireDetails';
+import FleetList from '../pages/operator/FleetList';
+import OperatorAddEquipment from '../pages/operator/AddEquipment';
+import IntegrationPlayground from '../pages/operator/IntegrationPlayground';
+import { useStore } from '../store';
+
+const NavItem = ({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) => {
+  const location = useLocation();
+  const isActive = location.pathname === to || (to !== '/operator' && location.pathname.startsWith(to));
+  
+  return (
+    <Link 
+      to={to} 
+      className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${isActive ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-900'}`}
+    >
+      {icon}
+      <span className="text-[10px] font-medium">{label}</span>
+    </Link>
+  );
+};
+
+const OperatorLayout = () => {
+  const { highVisMode, toggleHighVisMode } = useStore();
+
+  return (
+    <div className={`min-h-[100dvh] bg-slate-100 flex flex-col font-sans pb-[72px] transition-all ${highVisMode ? 'theme-high-vis' : ''}`}>
+      <header className="bg-indigo-600 text-white shadow-md sticky top-0 z-20 px-4 py-4 flex justify-between items-center w-full">
+        <Link to="/operator" className="text-xl font-bold tracking-tight hover:opacity-90">PlantFlow OS Console</Link>
+        <div className="flex items-center gap-2">
+          <Link 
+            to="/operator/integration" 
+            className="px-2.5 py-1 text-[11px] font-bold bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors border border-white/20 flex items-center gap-1"
+          >
+            <Terminal className="w-3.5 h-3.5 text-emerald-400" /> API Sandbox
+          </Link>
+          <button 
+            onClick={toggleHighVisMode}
+            className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors active:scale-95"
+            aria-label="Toggle High Visibility Mode"
+          >
+            {highVisMode ? <SunDim className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+          </button>
+        </div>
+      </header>
+      
+      <main className="flex-1 w-full max-w-lg mx-auto p-4 sm:p-6 w-full animate-in fade-in duration-300">
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
+      </main>
+
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-[72px] pb-[env(safe-area-inset-bottom)] z-40 max-w-lg mx-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="flex h-full px-2">
+          <NavItem to="/operator" icon={<Home className="w-6 h-6" />} label="Today" />
+          <NavItem to="/operator/hires" icon={<ListTodo className="w-6 h-6" />} label="Hires" />
+          
+          <div className="relative flex justify-center -mt-6 flex-1 h-full">
+            <Link 
+              to="/operator/scan" 
+              className="absolute top-0 w-16 h-16 bg-emerald-500 rounded-full flex justify-center items-center text-white shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform"
+            >
+              <QrCode className="w-8 h-8" />
+            </Link>
+            <span className="absolute bottom-2 text-[10px] font-medium text-slate-500 mt-2">Scan QR</span>
+          </div>
+
+          <NavItem to="/operator/fleet" icon={<ClipboardList className="w-6 h-6" />} label="Fleet" />
+        </div>
+      </nav>
+    </div>
+  );
+};
+
+export default function OperatorRoutes() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (u) => { setUser(u); setLoading(false); },
+      () => { setUser(null); setLoading(false); }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center">
+          <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <ClipboardList className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">PlantFlow OS Console</h1>
+          <p className="text-slate-500 mb-8">Sign in to manage your fleet and hires.</p>
+          <button 
+            onClick={() => googleSignIn()}
+            className="w-full bg-indigo-600 text-white font-medium px-4 py-3 rounded-xl hover:bg-indigo-700 active:bg-indigo-800 transition-colors flex items-center justify-center gap-2"
+          >
+            <LogIn className="w-5 h-5" />
+            Sign in with Google
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route element={<OperatorLayout />}>
+        <Route index element={<OperatorHome/>} />
+        <Route path="hires" element={<HiresList />} />
+        <Route path="scan" element={<OperatorScan />} />
+        <Route path="hires/:id" element={<OperatorHireDetails />} />
+        <Route path="fleet" element={<FleetList />} />
+        <Route path="fleet/add" element={<OperatorAddEquipment />} />
+        <Route path="integration" element={<IntegrationPlayground />} />
+      </Route>
+    </Routes>
+  );
+}
+
+=== File: ./components/ErrorBoundary.tsx ===
+import React, { ErrorInfo, ReactNode } from 'react';
+import { AlertTriangle, Home } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+interface Props {
+  children?: ReactNode;
+  fallback?: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends React.Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null,
+  };
+
+  public static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-sm border border-slate-200 text-center">
+            <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertTriangle className="w-8 h-8 text-red-500" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">Something went wrong</h1>
+            <p className="text-slate-600 mb-6">
+              {this.state.error?.message || "An unexpected error occurred in this component."}
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => this.setState({ hasError: false, error: null })}
+                className="px-6 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                Try Again
+              </button>
+              <Link
+                to="/"
+                onClick={() => this.setState({ hasError: false, error: null })}
+                className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors inline-flex items-center gap-2"
+              >
+                <Home className="w-5 h-5" />
+                Go Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+
+=== File: ./bookingService.ts ===
+import { collection, doc, getDocs, getDoc, addDoc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { db } from './firebase';
+import { Booking, BookingStatus } from './types';
+
+// Your Firestore rules require tenant‑scoped collections.
+// This MUST match: /tenants/{tenantId}/bookings
+const TENANT_ID = 'plantflow-os';
+
+export async function listBookings(status?: BookingStatus): Promise<Booking[]> {
+  const bookingsCol = collection(db, `tenants/${TENANT_ID}/bookings`);
+
+  let q = query(bookingsCol, orderBy('timestamp_created', 'desc'));
+
+  if (status) {
+    q = query(
+      bookingsCol,
+      where('status', '==', status),
+      orderBy('timestamp_created', 'desc')
+    );
+  }
+
+  const bookingsSnapshot = await getDocs(q);
+
+  return bookingsSnapshot.docs.map(doc => ({
+    booking_id: doc.id,
+    ...doc.data()
+  }) as Booking);
+}
+
+export async function getBooking(id: string): Promise<Booking | null> {
+  const bookingDoc = doc(db, `tenants/${TENANT_ID}/bookings/${id}`);
+  const bookingSnapshot = await getDoc(bookingDoc);
+
+  if (!bookingSnapshot.exists()) return null;
+
+  return {
+    booking_id: bookingSnapshot.id,
+    ...bookingSnapshot.data()
+  } as Booking;
+}
+
+export async function createBooking(payload: Omit<Booking, 'booking_id' | 'timestamp_created'>): Promise<Booking> {
+  const bookingsCol = collection(db, `tenants/${TENANT_ID}/bookings`);
+
+  const timestamp_created = new Date().toISOString();
+  const bookingData = { ...payload, timestamp_created };
+
+  const docRef = await addDoc(bookingsCol, bookingData);
+
+  return {
+    booking_id: docRef.id,
+    ...bookingData
+  } as Booking;
+}
+
+export async function updateBookingStatus(id: string, status: BookingStatus): Promise<void> {
+  const bookingDoc = doc(db, `tenants/${TENANT_ID}/bookings/${id}`);
+  await updateDoc(bookingDoc, { status });
+}
+
+=== File: ./vite-env.d.ts ===
+/// <reference types="vite/client" />
+
+=== File: ./hooks/useOAuthToken.ts ===
+import { useState, useCallback, useEffect } from 'react';
+import { googleSignIn, initAuth, logout } from '../authService';
+import { User } from 'firebase/auth';
+
+export function useOAuthToken() {
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [needsAuth, setNeedsAuth] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user, token) => {
+        setUser(user);
+        setToken(token);
+        setNeedsAuth(false);
+      },
+      () => {
+        setUser(null);
+        setToken(null);
+        setNeedsAuth(true);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const requestToken = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setToken(result.accessToken);
+        setUser(result.user);
+        setNeedsAuth(false);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    await logout();
+    setToken(null);
+    setUser(null);
+    setNeedsAuth(true);
+  }, []);
+
+  return { token, user, needsAuth, error, isLoading, requestToken, logout: handleLogout };
+}
+
+=== File: ./mockData.ts ===
+import { Equipment, Booking } from './types';
+
+export const INITIAL_EQUIPMENT: Equipment[] = [
+  // Excavators
+  {
+    machine_id: 'EX-015',
+    name: '1.5 Tonne Mini Digger',
+    category: 'Excavators',
+    job_fit: 'Driveways, small footings, landscaping',
+    access_width_mm: 990,
+    day_rate: 75,
+    delivery_rate: 30,
+    availability_status: 'available',
+    compliance_expiry: '2027-05-10',
+    image_url: '/images/mini_digger_1781357985087.webp',
+    notes: 'Tracks extendable. Comes with 3 buckets.'
+  },
+  {
+    machine_id: 'EX-030',
+    name: '3 Tonne Digger',
+    category: 'Excavators',
+    job_fit: 'Foundations, large extensions',
+    access_width_mm: 1550,
+    day_rate: 110,
+    delivery_rate: 45,
+    availability_status: 'hired',
+    compliance_expiry: '2027-01-15',
+    image_url: '/images/three_tonne_digger_1781358002768.webp',
+    notes: 'Cabbed, quick hitch. Check track tension.'
+  },
+  {
+    machine_id: 'EX-008',
+    name: 'Micro Digger (750mm)',
+    category: 'Excavators',
+    job_fit: 'Tight access, back gardens, doorways',
+    access_width_mm: 750,
+    day_rate: 70,
+    delivery_rate: 30,
+    availability_status: 'available',
+    compliance_expiry: '2027-08-20',
+    image_url: '/images/mini_digger_1781357985087.webp',
+    notes: 'Fits through standard doors. Retractable tracks.'
+  },
+  {
+    machine_id: 'EX-050',
+    name: '5 Tonne Tracked Excavator',
+    category: 'Excavators',
+    job_fit: 'Site clearance, heavy groundworks',
+    access_width_mm: 2000,
+    day_rate: 130,
+    delivery_rate: 60,
+    availability_status: 'available',
+    compliance_expiry: '2028-02-12',
+    image_url: '/images/three_tonne_digger_1781358002768.webp',
+    notes: 'Zero tail swing. Piped for breaker.'
+  },
+  {
+    machine_id: 'EX-080',
+    name: '8 Tonne Tracked Excavator',
+    category: 'Excavators',
+    job_fit: 'Large scale excavation, bulk digging',
+    access_width_mm: 2300,
+    day_rate: 160,
+    delivery_rate: 80,
+    availability_status: 'available',
+    compliance_expiry: '2027-11-05',
+    image_url: '/images/mini_digger_1781357985087.webp',
+    notes: 'Includes hydraulic quick hitch.'
+  },
+  {
+    machine_id: 'EX-019E',
+    name: 'Electric Mini Digger 1.9T',
+    category: 'Excavators',
+    job_fit: 'Indoor emission-free digging, sensitive sites',
+    access_width_mm: 990,
+    day_rate: 120,
+    delivery_rate: 35,
+    availability_status: 'available',
+    compliance_expiry: '2027-06-30',
+    image_url: '/images/three_tonne_digger_1781358002768.webp',
+    notes: 'Lithium-ion battery. Fast charger included.'
+  },
+
+  // Dumpers
+  {
+    machine_id: 'DM-100',
+    name: '1 Tonne Hi-Tip Dumper',
+    category: 'Dumpers',
+    job_fit: 'Moving spoil into skips, tight access',
+    access_width_mm: 1120,
+    day_rate: 60,
+    delivery_rate: 30,
+    availability_status: 'available',
+    compliance_expiry: '2026-11-20',
+    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    notes: 'Hydrostatic drive. Wash skip before return.'
+  },
+  {
+    machine_id: 'DM-300',
+    name: '3 Tonne Front Tip Dumper',
+    category: 'Dumpers',
+    job_fit: 'Medium site muck shift',
+    access_width_mm: 1650,
+    day_rate: 70,
+    delivery_rate: 40,
+    availability_status: 'available',
+    compliance_expiry: '2027-03-10',
+    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    notes: '4WD. ROPs bar folding.'
+  },
+  {
+    machine_id: 'DM-600',
+    name: '6 Tonne Swivel Skip Dumper',
+    category: 'Dumpers',
+    job_fit: 'Trench backfilling, large sites',
+    access_width_mm: 2200,
+    day_rate: 90,
+    delivery_rate: 60,
+    availability_status: 'hired',
+    compliance_expiry: '2027-04-15',
+    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    notes: 'Swivel skip mechanism.'
+  },
+  {
+    machine_id: 'DM-900',
+    name: '9 Tonne Front Tip Dumper',
+    category: 'Dumpers',
+    job_fit: 'Bulk earthmoving',
+    access_width_mm: 2500,
+    day_rate: 110,
+    delivery_rate: 80,
+    availability_status: 'available',
+    compliance_expiry: '2027-05-22',
+    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    notes: 'Heavy duty. Daily checks crucial.'
+  },
+  {
+    machine_id: 'DM-050T',
+    name: 'Tracked Micro Dumper 500kg',
+    category: 'Dumpers',
+    job_fit: 'Narrow paths, stairs, steep inclines',
+    access_width_mm: 700,
+    day_rate: 55,
+    delivery_rate: 25,
+    availability_status: 'available',
+    compliance_expiry: '2028-01-30',
+    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    notes: 'Walk-behind. Great terrain capabilities.'
+  },
+  {
+    machine_id: 'DM-100T',
+    name: 'Tracked Dumper 1 Tonne',
+    category: 'Dumpers',
+    job_fit: 'Muddy sites, low ground pressure',
+    access_width_mm: 1000,
+    day_rate: 65,
+    delivery_rate: 35,
+    availability_status: 'maintenance',
+    compliance_expiry: '2026-06-18',
+    image_url: '/images/hi_tip_dumper_1781358015457.webp',
+    notes: 'Ride-on plate. Clean tracks before return.'
+  },
+
+  // Compaction
+  {
+    machine_id: 'CP-035',
+    name: 'Wacker Plate (350mm)',
+    category: 'Compaction',
+    job_fit: 'Patio & block paving preparation',
+    access_width_mm: 350,
+    day_rate: 25,
+    delivery_rate: 15,
+    availability_status: 'maintenance',
+    compliance_expiry: '2026-08-05',
+    image_url: '/images/wacker_plate_1781358033267.webp',
+    notes: 'Petrol, pull start needs checking. Include rubber mat.'
+  },
+  {
+    machine_id: 'RM-010',
+    name: 'Trench Rammer',
+    category: 'Compaction',
+    job_fit: 'Compacting soil and hardcore in trenches',
+    access_width_mm: 280,
+    day_rate: 55,
+    delivery_rate: 25,
+    availability_status: 'available',
+    compliance_expiry: '2027-05-20',
+    image_url: '/images/trench_rammer_1781358358836.webp',
+    notes: '4-stroke. Check jumping shoe.'
+  },
+  {
+    machine_id: 'CP-050R',
+    name: 'Forward/Reverge Plate (500mm)',
+    category: 'Compaction',
+    job_fit: 'Deep trench compaction, gsub-base',
+    access_width_mm: 500,
+    day_rate: 45,
+    delivery_rate: 25,
+    availability_status: 'available',
+    compliance_expiry: '2028-02-14',
+    image_url: '/images/wacker_plate_1781358033267.webp',
+    notes: 'Heavy weight. 2-person lift or ramp access.'
+  },
+  {
+    machine_id: 'RL-800',
+    name: 'Twin Drum Ride-On Roller 800mm',
+    category: 'Compaction',
+    job_fit: 'Tarmac, large ssub-base areas',
+    access_width_mm: 880,
+    day_rate: 90,
+    delivery_rate: 45,
+    availability_status: 'available',
+    compliance_expiry: '2027-09-10',
+    image_url: '/images/trench_rammer_1781358358836.webp',
+    notes: 'Includes water spray system.'
+  },
+  {
+    machine_id: 'RL-1200',
+    name: 'Twin Drum Ride-On Roller 1200mm',
+    category: 'Compaction',
+    job_fit: 'Road repairs, car parks',
+    access_width_mm: 1300,
+    day_rate: 120,
+    delivery_rate: 60,
+    availability_status: 'hired',
+    compliance_expiry: '2026-12-01',
+    image_url: '/images/wacker_plate_1781358033267.webp',
+    notes: 'Diesel. Foldable ROPs.'
+  },
+  {
+    machine_id: 'RL-PED',
+    name: 'Single Drum Pedestrian Roller',
+    category: 'Compaction',
+    job_fit: 'Footpaths, repair work',
+    access_width_mm: 700,
+    day_rate: 65,
+    delivery_rate: 30,
+    availability_status: 'available',
+    compliance_expiry: '2027-11-15',
+    image_url: '/images/trench_rammer_1781358358836.webp',
+    notes: 'Walk behind setup. Heavy-duty traction.'
+  },
+
+  // Groundcare
+  {
+    machine_id: 'TR-015',
+    name: 'Trencher Walk-Behind',
+    category: 'Groundcare',
+    job_fit: 'Laying cables, water pipes, drainage',
+    access_width_mm: 700,
+    day_rate: 90,
+    delivery_rate: 35,
+    availability_status: 'available',
+    compliance_expiry: '2027-03-12',
+    image_url: '/images/trencher_1781358047416.webp',
+    notes: 'Cuts up to 600mm deep. Check chain sharpness.'
+  },
+  {
+    machine_id: 'SG-040',
+    name: 'Stump Grinder',
+    category: 'Groundcare',
+    job_fit: 'Grinding tree stumps below ground level',
+    access_width_mm: 750,
+    day_rate: 120,
+    delivery_rate: 40,
+    availability_status: 'available',
+    compliance_expiry: '2027-04-18',
+    image_url: '/images/post_hole_borer_1781358269135.webp',
+    notes: 'Check cutting teeth. Offer safety visor.'
+  },
+  {
+    machine_id: 'WC-060',
+    name: 'Wood Chipper 6 Inch',
+    category: 'Groundcare',
+    job_fit: 'Chipping branches and brush up to 6 inches',
+    access_width_mm: 1500,
+    day_rate: 160,
+    delivery_rate: 50,
+    availability_status: 'hired',
+    compliance_expiry: '2026-09-22',
+    image_url: '/images/stump_grinder_1781358210749.webp',
+    notes: 'Towed unit. Ensure customer has correct tow ball.'
+  },
+  {
+    machine_id: 'PH-020',
+    name: 'Pogt Hole Borer Petrol',
+    category: 'Groundcare',
+    job_fit: 'Boring holes for fence posts and planting',
+    access_width_mm: 600,
+    day_rate: 40,
+    delivery_rate: 20,
+    availability_status: 'maintenance',
+    compliance_expiry: '2026-07-20',
+    image_url: '/images/wood_chipper_1781358225040.webp',
+    notes: 'Two-person operation. Auger bits available separating.'
+  },
+  {
+    machine_id: 'GC-ROT',
+    name: 'Rotavator Heavy Duty',
+    category: 'Groundcare',
+    job_fit: 'Turning soil, preparing for turfing or seeding',
+    access_width_mm: 650,
+    day_rate: 55,
+    delivery_rate: 25,
+    availability_status: 'available',
+    compliance_expiry: '2027-09-30',
+    image_url: '/images/trencher_1781358047416.webp',
+    notes: 'Hydraulically driven tines. Easy speed selection.'
+  },
+  {
+    machine_id: 'GC-TC',
+    name: 'Turf Cutter',
+    category: 'Groundcare',
+    job_fit: 'Lifting old turf effortlessly',
+    access_width_mm: 500,
+    day_rate: 65,
+    delivery_rate: 25,
+    availability_status: 'available',
+    compliance_expiry: '2028-02-12',
+    image_url: '/images/post_hole_borer_1781358269135.webp',
+    notes: 'Depth adjustable. Four wheel drive.'
+  },
+
+  // Access
+  {
+    machine_id: 'SL-190',
+    name: 'Scissor Lift 19ft',
+    category: 'Access',
+    job_fit: 'Indoor maintenance and installation at height',
+    access_width_mm: 810,
+    day_rate: 85,
+    delivery_rate: 45,
+    availability_status: 'available',
+    compliance_expiry: '2026-12-05',
+    image_url: '/images/scissor_lift_1781358239898.webp',
+    notes: 'Battery powered. Charge fully before dispatch. Non-marking tyres.'
+  },
+  {
+    machine_id: 'AT-040',
+    name: 'Alloy Tower Scaffold 4m',
+    category: 'Access',
+    job_fit: 'Painting, decorating, minor roof repairs',
+    access_width_mm: 1450,
+    day_rate: 45,
+    delivery_rate: 25,
+    availability_status: 'available',
+    compliance_expiry: '2028-01-10',
+    image_url: '/images/alloy_tower_1781358254196.webp',
+    notes: 'Double width. Check all bracing clips.'
+  },
+  {
+    machine_id: 'SL-260',
+    name: 'Scissor Lift 26ft (Electric)',
+    category: 'Access',
+    job_fit: 'Warehouses, indoor ceilings',
+    access_width_mm: 1170,
+    day_rate: 110,
+    delivery_rate: 50,
+    availability_status: 'available',
+    compliance_expiry: '2027-03-22',
+    image_url: '/images/scissor_lift_1781358239898.webp',
+    notes: 'Provides extra height for high bays.'
+  },
+  {
+    machine_id: 'SL-320',
+    name: 'Scissor Lift 32ft (Diesel)',
+    category: 'Access',
+    job_fit: 'Rough terrain outdoor construction',
+    access_width_mm: 1750,
+    day_rate: 140,
+    delivery_rate: 70,
+    availability_status: 'hired',
+    compliance_expiry: '2027-10-18',
+    image_url: '/images/alloy_tower_1781358254196.webp',
+    notes: '4WD. Auto-levelling outriggers.'
+  },
+  {
+    machine_id: 'BL-450',
+    name: 'Articulating Boom Lift 45ft',
+    category: 'Access',
+    job_fit: 'Reaching over obstacles',
+    access_width_mm: 2000,
+    day_rate: 190,
+    delivery_rate: 90,
+    availability_status: 'available',
+    compliance_expiry: '2027-08-30',
+    image_url: '/images/scissor_lift_1781358239898.webp',
+    notes: 'Diesel. Harness compliance mandatory.'
+  },
+  {
+    machine_id: 'PL-POP',
+    name: 'Pop-Up Push Around Lift',
+    category: 'Access',
+    job_fit: 'Low level access, drop ceilings',
+    access_width_mm: 700,
+    day_rate: 40,
+    delivery_rate: 25,
+    availability_status: 'available',
+    compliance_expiry: '2028-04-12',
+    image_url: '/images/alloy_tower_1781358254196.webp',
+    notes: 'Manual push. Battery powered lift.'
+  },
+
+  // Power & Light
+  {
+    machine_id: 'GN-030',
+    name: 'Generator 3kVA',
+    category: 'Power & Light',
+    job_fit: 'Portable power for small tools and lighting',
+    access_width_mm: 450,
+    day_rate: 40,
+    delivery_rate: 20,
+    availability_status: 'hired',
+    compliance_expiry: '2026-08-14',
+    image_url: '/images/generator_3kva_1781358330592.webp',
+    notes: 'Dual 110V/240V outputs. Petrol. Check oil level.'
+  },
+  {
+    machine_id: 'GN-060',
+    name: 'Generator 6kVA',
+    category: 'Power & Light',
+    job_fit: 'Powering multiple tools and site cabins',
+    access_width_mm: 600,
+    day_rate: 55,
+    delivery_rate: 30,
+    availability_status: 'available',
+    compliance_expiry: '2028-02-14',
+    image_url: '/images/generator_3kva_1781358330592.webp',
+    notes: 'Electric start. Includes trolley kit.'
+  },
+  {
+    machine_id: 'GN-100S',
+    name: 'Generator 10kVA Silenced',
+    category: 'Power & Light',
+    job_fit: 'Events, residential site work',
+    access_width_mm: 850,
+    day_rate: 95,
+    delivery_rate: 50,
+    availability_status: 'available',
+    compliance_expiry: '2027-09-02',
+    image_url: '/images/generator_3kva_1781358330592.webp',
+    notes: 'Diesel. Ultra-quiet canopy design.'
+  },
+  {
+    machine_id: 'LT-LED',
+    name: 'Portable Lighting Tower (LED)',
+    category: 'Power & Light',
+    job_fit: 'Night works, event illumination',
+    access_width_mm: 1200,
+    day_rate: 80,
+    delivery_rate: 40,
+    availability_status: 'available',
+    compliance_expiry: '2026-11-20',
+    image_url: '/images/generator_3kva_1781358330592.webp',
+    notes: 'Mast extends to 5m. Eco run.'
+  },
+  {
+    machine_id: 'TR-33',
+    name: '110V Transformer 3.3kVA',
+    category: 'Power & Light',
+    job_fit: 'Stepping down site power for safe tool use',
+    access_width_mm: 300,
+    day_rate: 15,
+    delivery_rate: 10,
+    availability_status: 'available',
+    compliance_expiry: '2029-01-01',
+    image_url: '/images/generator_3kva_1781358330592.webp',
+    notes: 'Individually PAT tested.'
+  },
+  {
+    machine_id: 'GN-BAT',
+    name: 'Portable Battery Generator 2kW',
+    category: 'Power & Light',
+    job_fit: 'Indoor power, van charging',
+    access_width_mm: 200,
+    day_rate: 35,
+    delivery_rate: 15,
+    availability_status: 'available',
+    compliance_expiry: '2028-05-30',
+    image_url: '/images/generator_3kva_1781358330592.webp',
+    notes: 'Emissions free. Silent operation.'
+  },
+
+  // Breaking
+  {
+    machine_id: 'BR-110',
+    name: 'Breaker Heavy Duty 110V',
+    category: 'Breaking',
+    job_fit: 'Breaking up concrete slabs and pathways',
+    access_width_mm: 250,
+    day_rate: 45,
+    delivery_rate: 20,
+    availability_status: 'available',
+    compliance_expiry: '2026-09-05',
+    image_url: '/images/breaker_110v_1781358344746.webp',
+    notes: 'Requires 110V transformer. Include pointed and flat chisels.'
+  },
+  {
+    machine_id: 'BR-MED',
+    name: 'Medium Duty Breaker 110V',
+    category: 'Breaking',
+    job_fit: 'Removing render, floor tiles',
+    access_width_mm: 150,
+    day_rate: 35,
+    delivery_rate: 15,
+    availability_status: 'available',
+    compliance_expiry: '2027-10-12',
+    image_url: '/images/breaker_110v_1781358344746.webp',
+    notes: 'Lighter weight for wall work. Check bits.'
+  },
+  {
+    machine_id: 'BR-HYD',
+    name: 'Hydraulic Breaker Power Pack',
+    category: 'Breaking',
+    job_fit: 'Heavy concrete breaking, roadworks',
+    access_width_mm: 600,
+    day_rate: 75,
+    delivery_rate: 30,
+    availability_status: 'available',
+    compliance_expiry: '2028-03-21',
+    image_url: '/images/breaker_110v_1781358344746.webp',
+    notes: 'Petrol pack with hoses and high power gun.'
+  },
+  {
+    machine_id: 'BR-CUT',
+    name: 'Petrol Cut-Off Saw 12"',
+    category: 'Breaking',
+    job_fit: 'Cutting concrete, stone, masonry',
+    access_width_mm: 300,
+    day_rate: 35,
+    delivery_rate: 15,
+    availability_status: 'hired',
+    compliance_expiry: '2026-08-30',
+    image_url: '/images/breaker_110v_1781358344746.webp',
+    notes: '2-stroke. Sell diamond blades and PPE.'
+  },
+  {
+    machine_id: 'BR-FLP',
+    name: 'Concrete Floor Planer',
+    category: 'Breaking',
+    job_fit: 'Levelling concrete, scarifying',
+    access_width_mm: 450,
+    day_rate: 85,
+    delivery_rate: 35,
+    availability_status: 'available',
+    compliance_expiry: '2027-11-19',
+    image_url: '/images/breaker_110v_1781358344746.webp',
+    notes: 'Petrol powered. TCT flails charge separately.'
+  },
+  {
+    machine_id: 'BR-SDS',
+    name: 'SDS Max Combi Hammer 110V',
+    category: 'Breaking',
+    job_fit: 'Drilling large holes, light chipping',
+    access_width_mm: 120,
+    day_rate: 28,
+    delivery_rate: 15,
+    availability_status: 'available',
+    compliance_expiry: '2029-02-15',
+    image_url: '/images/breaker_110v_1781358344746.webp',
+    notes: 'Check drill bits availability.'
+  },
+
+  // Floor Care
+  {
+    machine_id: 'FS-240',
+    name: 'Floor Sander 240V',
+    category: 'Floor Care',
+    job_fit: 'Sanding wooden floorboards',
+    access_width_mm: 400,
+    day_rate: 55,
+    delivery_rate: 20,
+    availability_status: 'available',
+    compliance_expiry: '2026-11-15',
+    image_url: '/images/carpet_cleaner_1781358295224.webp',
+    notes: 'Remind customer about dust bags and sanding sheets.'
+  },
+  {
+    machine_id: 'CC-110',
+    name: 'Carpet Cleaner',
+    category: 'Floor Care',
+    job_fit: 'Deep cleaning carpets and upholstery',
+    access_width_mm: 350,
+    day_rate: 28,
+    delivery_rate: 15,
+    availability_status: 'available',
+    compliance_expiry: '2027-02-28',
+    image_url: '/images/floor_sander_1781358280768.webp',
+    notes: 'Include upholstery tool. Sell cleaning fluid separately.'
+  },
+  {
+    machine_id: 'FC-EDG',
+    name: 'Floor Edging Sander',
+    category: 'Floor Care',
+    job_fit: 'Sanding edges, stairs and tight corners',
+    access_width_mm: 200,
+    day_rate: 35,
+    delivery_rate: 15,
+    availability_status: 'available',
+    compliance_expiry: '2028-05-18',
+    image_url: '/images/carpet_cleaner_1781358295224.webp',
+    notes: 'Often hired with main 240V floor sander.'
+  },
+  {
+    machine_id: 'FC-VAC',
+    name: 'Industrial Vacuum Cleaner',
+    category: 'Floor Care',
+    job_fit: 'Heavy-duty site cleanup, dust management',
+    access_width_mm: 450,
+    day_rate: 30,
+    delivery_rate: 15,
+    availability_status: 'available',
+    compliance_expiry: '2027-08-11',
+    image_url: '/images/floor_sander_1781358280768.webp',
+    notes: 'Wet/Dry capabilities. Check filters.'
+  },
+  {
+    machine_id: 'FC-POL',
+    name: 'Floor Polisher / Scrubber',
+    category: 'Floor Care',
+    job_fit: 'Cleaning hard floors, tile polishing',
+    access_width_mm: 400,
+    day_rate: 45,
+    delivery_rate: 20,
+    availability_status: 'hired',
+    compliance_expiry: '2028-03-09',
+    image_url: '/images/carpet_cleaner_1781358295224.webp',
+    notes: 'Sell appropriate cleaning pads (red, green, black).'
+  },
+  {
+    machine_id: 'FC-STR',
+    name: 'Tile Stripper',
+    category: 'Floor Care',
+    job_fit: 'Removing vinyl flooring, carpet tiles',
+    access_width_mm: 350,
+    day_rate: 55,
+    delivery_rate: 25,
+    availability_status: 'available',
+    compliance_expiry: '2026-10-31',
+    image_url: '/images/floor_sander_1781358280768.webp',
+    notes: 'Check blade sharpness before dispatch.'
+  }
+];
+
+const today = new Date();
+const tomorrow = new Date(today);
+tomorrow.setDate(today.getDate() + 1);
+
+const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+export const INITIAL_BOOKINGS: Booking[] = [
+  {
+    booking_id: 'bk-1',
+    machine_id: 'EX-030',
+    hirer_name: 'John Smith',
+    hirer_phone: '07700 900123',
+    hirer_email: 'john@example.com',
+    site_address: '12 High St, London',
+    start_date: formatDate(today),
+    end_date: formatDate(tomorrow),
+    delivery_window: 'AM',
+    status: 'active',
+    qr_start_code: 'QR-BK1-START',
+    qr_end_code: 'QR-BK1-END',
+    timestamp_created: new Date(today.getTime() - 86400000).toISOString(),
+    totalCost: 220,
+    deliveryNeeded: true
+  },
+  {
+    booking_id: 'bk-2',
+    machine_id: 'EX-015',
+    hirer_name: 'Sarah Jones',
+    hirer_phone: '07700 900456',
+    hirer_email: 'sarah.j@example.com',
+    site_address: 'Collection',
+    start_date: formatDate(tomorrow),
+    end_date: formatDate(new Date(tomorrow.getTime() + 86400000 * 2)),
+    delivery_window: 'None',
+    status: 'confirmed',
+    qr_start_code: 'QR-BK2-START',
+    qr_end_code: 'QR-BK2-END',
+    timestamp_created: formatDate(today),
+    totalCost: 225,
+    deliveryNeeded: false
+  }
+];
+
