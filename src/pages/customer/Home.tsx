@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronRight, Search, Calendar, ArrowRight, Heart, GitCompare } from 'lucide-react';
 import { INITIAL_EQUIPMENT } from '../../mockData';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { quickJobs } from '../../components/QuickJobFinder';
 
 const CATEGORIES = [
   { 
@@ -372,7 +373,20 @@ function getAvailabilitySignals(item: any) {
 
 export default function CustomerHome() {
   useDocumentTitle("Hire Equipment");
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = searchParams.get('q') || '';
+
+  const setSearchQuery = (val: string) => {
+    setSearchParams(prev => {
+      if (val) {
+        prev.set('q', val);
+      } else {
+        prev.delete('q');
+      }
+      return prev;
+    }, { replace: true });
+  };
+
   const [favourites, setFavourites] = useState<string[]>([]);
   const [compareList, setCompareList] = useState<string[]>([]);
 
@@ -392,15 +406,6 @@ export default function CustomerHome() {
     );
   };
 
-  const quickJobs = useMemo(() => [
-    { label: '🌳 Garden Clearing', query: 'landscaping' },
-    { label: '🧱 Dig Foundations', query: 'foundations' },
-    { label: '🚘 Level Driveway', query: 'driveways' },
-    { label: '🔨 Break Concrete', query: 'breaker' },
-    { label: '🪜 Reach High', query: 'access' },
-    { label: '🪵 Floor Sanding', query: 'sander' }
-  ], []);
-
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
@@ -410,6 +415,151 @@ export default function CustomerHome() {
       (item.job_fit && item.job_fit.toLowerCase().includes(query))
     ).slice(0, 5);
   }, [searchQuery]);
+
+  const filteredEquipment = useMemo(() => {
+    if (!searchQuery.trim()) return INITIAL_EQUIPMENT;
+    const query = searchQuery.toLowerCase();
+    return INITIAL_EQUIPMENT.filter(item => 
+      item.name.toLowerCase().includes(query) || 
+      item.category.toLowerCase().includes(query) ||
+      (item.job_fit && item.job_fit.toLowerCase().includes(query))
+    );
+  }, [searchQuery]);
+
+  const renderEquipmentCard = (item: any) => {
+    const isAvailable = item.availability_status === 'available';
+    const isHired = item.availability_status === 'hired';
+    
+    const { bestFor, stats, outcomes } = getSpecsAndTags(item);
+    const { primary, badgeClass, secondary } = getAvailabilitySignals(item);
+    const isFavourite = favourites.includes(item.machine_id);
+    const isCompared = compareList.includes(item.machine_id);
+
+    return (
+      <Link 
+        key={item.machine_id} 
+        to={`/customer/equipment/${item.machine_id}`}
+        className="flex flex-col bg-white rounded-2xl overflow-hidden hover:-translate-y-1 transition-all group shadow-sm border border-slate-250 hover:shadow-xl focus-visible:ring-3 focus-visible:ring-indigo-500 p-5 space-y-4"
+      >
+        {/* Top Action Bar */}
+        <div className="flex items-center justify-between z-10">
+          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
+            {primary}
+          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => toggleFavourite(item.machine_id, e)}
+              className="w-12 h-12 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-255 text-slate-700 hover:text-red-600 active:bg-slate-100 transition-colors cursor-pointer"
+              aria-label={isFavourite ? "Remove from favourites" : "Add to favourites"}
+            >
+              <Heart className={`w-5 h-5 ${isFavourite ? 'fill-red-500 text-red-500' : ''}`} />
+            </button>
+            <button
+              onClick={(e) => toggleCompare(item.machine_id, e)}
+              className="w-12 h-12 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-255 text-slate-705 text-slate-700 hover:text-indigo-700 active:bg-slate-100 transition-colors cursor-pointer"
+              aria-label={isCompared ? "Remove from compare" : "Add to compare"}
+            >
+              <GitCompare className={`w-5 h-5 ${isCompared ? 'text-indigo-650' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Machine Image */}
+        <div className="flex-1 flex flex-col space-y-3">
+          <div className="h-44 w-full bg-slate-50 rounded-xl flex items-center justify-center p-3 overflow-hidden border border-slate-100">
+            <img 
+              src={item.image_url} 
+              alt={item.name} 
+              className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
+              onError={(e) => {
+                 e.currentTarget.onerror = null;
+                 e.currentTarget.src = '/images/mini_digger_1781357985087.webp';
+              }}
+            />
+          </div>
+          <h4 className="text-lg font-black text-slate-955 text-slate-950 leading-snug group-hover:text-indigo-700 transition-colors">
+            {item.name}
+          </h4>
+        </div>
+
+        {/* Availability */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
+              {primary}
+            </span>
+            {secondary.map((signal) => {
+              let style = 'bg-slate-50 text-slate-750 border-slate-200';
+              if (signal === 'Only 2 Left' || signal === 'Only 1 Left') {
+                style = 'bg-amber-50/50 text-slate-750 border-amber-200';
+              } else if (signal === 'High Demand') {
+                style = 'bg-indigo-50/50 text-slate-750 border-indigo-200';
+              } else if (signal.includes('Collection') || signal.includes('Delivery')) {
+                style = 'bg-slate-50 text-slate-650 border-slate-200';
+              } else if (signal === 'Weekend Available') {
+                style = 'bg-teal-50 text-teal-800 border-teal-200';
+              }
+              return (
+                <span key={signal} className={`px-2 py-0.5 rounded-[6px] text-[10px] font-bold border ${style}`}>
+                  {signal}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Price */}
+        <div className="flex items-baseline justify-between border-t-2 border-slate-100 pt-3">
+          <div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black text-indigo-900">£{item.day_rate}</span>
+              <span className="text-xs font-black text-slate-500 uppercase tracking-wider">/ day</span>
+            </div>
+            <span className="text-[10px] font-black text-slate-600 block mt-0.5">
+              + £{item.delivery_rate} delivery • {isAvailable ? 'Same day available' : 'Delivered tomorrow'}
+            </span>
+          </div>
+        </div>
+
+        {/* Best For */}
+        <p className="text-xs font-bold text-slate-600 leading-relaxed italic">
+          {bestFor}
+        </p>
+
+        {/* Machine Specs */}
+        <div className="grid grid-cols-3 gap-1 py-2 px-1 bg-slate-50 rounded-lg text-center border border-slate-100">
+          {stats.map((stat, idx) => (
+            <div key={idx} className={`space-y-0.5 ${idx < 2 ? 'border-r-2 border-slate-200' : ''}`}>
+              <span className="block text-[8px] font-black uppercase tracking-widest text-slate-500">
+                {stat.label}
+              </span>
+              <span className="block font-mono text-[11px] font-black text-slate-900">
+                {stat.value}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Outcomes */}
+        <div className="flex flex-wrap gap-1.5">
+          {outcomes.map((outcome) => (
+            <span key={outcome} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-emerald-50 text-emerald-950 font-black text-[10px] border border-emerald-250 shadow-sm shrink-0">
+              ✔ {outcome}
+            </span>
+          ))}
+        </div>
+
+        {/* Primary CTA */}
+        <div className="pt-2">
+          <div className="w-full h-[52px] min-h-[52px] bg-indigo-700 hover:bg-indigo-850 group-hover:bg-indigo-650 text-white font-black text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-95">
+            <span>Hire Now</span>
+            <ArrowRight className="w-4 h-4" />
+          </div>
+        </div>
+      </Link>
+    );
+  };
 
   return (
     <div className="flex flex-col font-sans animate-in fade-in duration-500 max-w-7xl mx-auto w-full pb-16 bg-white overflow-hidden shadow-sm sm:rounded-3xl sm:border sm:border-slate-200">
@@ -482,262 +632,140 @@ export default function CustomerHome() {
             )}
           </div>
 
-          {/* Quick Pick Chips (B2B Task-fit Optimization) */}
-          <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center">
-            <span className="text-[10px] font-black text-indigo-250 uppercase tracking-widest shrink-0">Quick Job Finder:</span>
-            <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 select-none">
+          {/* Quick Pick Chips (Mobile Only, Styled Airbnb-style) */}
+          <div className="mt-4 md:hidden flex flex-col gap-2">
+            <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest shrink-0">Quick Job Finder:</span>
+            <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 select-none">
               {quickJobs.map(job => {
                 const isActive = searchQuery === job.query;
                 return (
                   <button
                     key={job.label}
                     onClick={() => setSearchQuery(job.query)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 border ${
+                    className={`flex items-center gap-1.5 pb-2 px-1 relative transition-colors cursor-pointer border-b-2 shrink-0 ${
                       isActive 
-                        ? 'bg-white text-indigo-700 border-white shadow-sm'
-                        : 'bg-indigo-800 border-indigo-650 hover:border-indigo-400 text-white'
+                        ? 'border-white text-white font-black' 
+                        : 'border-transparent text-indigo-200 hover:text-white font-bold'
                     }`}
                   >
-                    {job.label}
+                    <span className="text-base leading-none">{job.icon}</span>
+                    <span className="text-xs whitespace-nowrap">{job.label}</span>
                   </button>
                 );
               })}
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="px-2.5 py-1.5 rounded-full text-xs font-extrabold bg-red-650/20 text-red-200 border border-red-500/30 hover:bg-red-650/40 hover:text-white transition-all cursor-pointer whitespace-nowrap active:scale-95"
-                >
-                  Clear ✕
-                </button>
-              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Categories Grid - Denser, High-Contrast & Fast to Scan */}
-      <div className="w-full px-5 py-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-tight border-l-4 border-indigo-600 pl-2">Categories</h2>
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">8 Types</span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {CATEGORIES.map((category) => (
-            <a 
-              key={category.id} 
-              href={`#${category.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById(category.id)?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  document.getElementById(category.id)?.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
-              className="group relative flex flex-col rounded-2xl overflow-hidden aspect-square bg-slate-100 border border-slate-200 hover:border-indigo-500 hover:shadow-md transition-all duration-300 cursor-pointer select-none focus-visible:ring-3 focus-visible:ring-indigo-500"
+      {searchQuery.trim() ? (
+        <div className="w-full px-5 py-6 max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 border-l-4 border-indigo-650 pl-2">
+              Results for "{searchQuery}"
+            </h2>
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="text-sm font-bold text-indigo-600 hover:underline cursor-pointer"
             >
-              {/* Background Image */}
-              <div className="absolute inset-0 w-full h-full">
-                <img 
-                  src={category.image} 
-                  alt={category.name} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = '/images/mini_digger_1781357985087.webp';
-                  }}
-                />
-              </div>
-              
-              {/* Subtle ambient shadow overlay */}
-              <div className="absolute inset-0 bg-black/5 group-hover:bg-black/15 transition-colors duration-300"></div>
-
-              {/* Theme-compliant floating label pill (matches reference mockup exactly and scales across light/dark modes) */}
-              <div className="absolute bottom-3 left-3 right-3 category-pill backdrop-blur-[2px] rounded-xl px-3 py-3 flex justify-between items-center shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-all duration-300 group-hover:translate-y-[-1px] z-20">
-                <span className="font-extrabold text-xs sm:text-sm tracking-tight truncate">
-                  {category.name}
-                </span>
-                <ChevronRight className="w-4 h-4 shrink-0 ml-1 opacity-80" />
-              </div>
-            </a>
-          ))}
-        </div>
-      </div>
-
-      {/* Equipment Products per Category */}
-      <div className="w-full px-5 py-4 max-w-7xl mx-auto space-y-12">
-        {CATEGORIES.map(category => {
-          const categoryEquipment = INITIAL_EQUIPMENT.filter(item => item.category === category.id).slice(0, 6);
-          if (categoryEquipment.length === 0) return null;
-
-          return (
-            <div key={category.id} id={category.id} className="scroll-mt-6">
-              <h3 className="text-2xl font-black text-slate-800 mb-6 border-b-2 border-slate-100 pb-2 flex justify-between items-end">
-                {category.name}
-                <Link to={`/customer`} className="text-indigo-600 text-sm font-bold hover:underline mb-1 flex items-center gap-1">
-                  View All <ChevronRight className="w-4 h-4" />
-                </Link>
-              </h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {categoryEquipment.map((item) => {
-                  const isAvailable = item.availability_status === 'available';
-                  const isHired = item.availability_status === 'hired';
-                  
-                  // Availability Badge (Level 1)
-                  const availabilityText = isAvailable 
-                    ? 'Available Today' 
-                    : isHired 
-                      ? 'Available Tomorrow' 
-                      : 'Limited Stock';
-                      
-                  const availabilityClass = isAvailable 
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                    : isHired 
-                      ? 'bg-indigo-50 text-indigo-700 border-indigo-250'
-                      : 'bg-amber-50 text-amber-700 border-amber-250';
-
-                  const { bestFor, stats, outcomes } = getSpecsAndTags(item);
-                  const { primary, badgeClass, secondary } = getAvailabilitySignals(item);
-                  const isFavourite = favourites.includes(item.machine_id);
-                  const isCompared = compareList.includes(item.machine_id);
-
-                  return (
-                    <Link 
-                      key={item.machine_id} 
-                      to={`/customer/equipment/${item.machine_id}`}
-                      className="flex flex-col bg-white rounded-2xl overflow-hidden hover:-translate-y-1 transition-all group shadow-sm border border-slate-250 hover:shadow-xl focus-visible:ring-3 focus-visible:ring-indigo-500 p-5 space-y-4"
-                    >
-                      {/* Top Action Bar (泥だらけの手・雨天でも誤作動を防ぐ48px以上のゆったりしたタップ領域) */}
-                      <div className="flex items-center justify-between z-10">
-                        {/* 1. Availability (屋外視認性の高い、高コントラストな枠付きバッジ) */}
-                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
-                          {primary}
-                        </span>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => toggleFavourite(item.machine_id, e)}
-                            className="w-12 h-12 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-250 text-slate-700 hover:text-red-600 active:bg-slate-100 transition-colors cursor-pointer"
-                            aria-label={isFavourite ? "Remove from favourites" : "Add to favourites"}
-                          >
-                            <Heart className={`w-5 h-5 ${isFavourite ? 'fill-red-500 text-red-500' : ''}`} />
-                          </button>
-                          <button
-                            onClick={(e) => toggleCompare(item.machine_id, e)}
-                            className="w-12 h-12 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-255 text-slate-700 hover:text-indigo-700 active:bg-slate-100 transition-colors cursor-pointer"
-                            aria-label={isCompared ? "Remove from compare" : "Add to compare"}
-                          >
-                            <GitCompare className={`w-5 h-5 ${isCompared ? 'text-indigo-650' : ''}`} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* 2. Machine Image */}
-                      <div className="flex-1 flex flex-col space-y-3">
-                        <div className="h-44 w-full bg-slate-50 rounded-xl flex items-center justify-center p-3 overflow-hidden border border-slate-100">
-                          <img 
-                            src={item.image_url} 
-                            alt={item.name} 
-                            className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
-                            onError={(e) => {
-                               e.currentTarget.onerror = null;
-                               e.currentTarget.src = '/images/mini_digger_1781357985087.webp';
-                            }}
-                          />
-                        </div>
-                        
-                        {/* Machine Name (太陽光下でもクッキリ見える黒太字) */}
-                        <h4 className="text-lg font-black text-slate-950 leading-snug group-hover:text-indigo-700 transition-colors">
-                          {item.name}
-                        </h4>
-                      </div>
-
-                      {/* 1. Availability (Appears directly before price) */}
-                      <div className="space-y-1.5 pt-1">
-                        <div className="flex flex-wrap gap-1.5 items-center">
-                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
-                            {primary}
-                          </span>
-                          {secondary.map((signal) => {
-                            let style = 'bg-slate-50 text-slate-750 border-slate-200';
-                            if (signal === 'Only 2 Left' || signal === 'Only 1 Left') {
-                              style = 'bg-amber-50/50 text-slate-750 border-amber-200';
-                            } else if (signal === 'High Demand') {
-                              style = 'bg-indigo-50/50 text-slate-750 border-indigo-200';
-                            } else if (signal.includes('Collection') || signal.includes('Delivery')) {
-                              style = 'bg-slate-50 text-slate-650 border-slate-200';
-                            } else if (signal === 'Weekend Available') {
-                              style = 'bg-teal-50 text-teal-800 border-teal-200';
-                            }
-                            return (
-                              <span key={signal} className={`px-2 py-0.5 rounded-[6px] text-[10px] font-bold border ${style}`}>
-                                {signal}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* 3. Price (1秒以内に確認できる超高コントラスト表示) */}
-                      <div className="flex items-baseline justify-between border-t-2 border-slate-100 pt-3">
-                        <div>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-indigo-900">£{item.day_rate}</span>
-                            <span className="text-xs font-black text-slate-500 uppercase tracking-wider">/ day</span>
-                          </div>
-                          <span className="text-[10px] font-black text-slate-600 block mt-0.5">
-                            + £{item.delivery_rate} delivery • {isAvailable ? 'Same day available' : 'Delivered tomorrow'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* 4. Best For */}
-                      <p className="text-xs font-bold text-slate-600 leading-relaxed italic">
-                        {bestFor}
-                      </p>
-
-                      {/* 5. Machine Specs (屋外視認性に配慮した強コントラストフォント) */}
-                      <div className="grid grid-cols-3 gap-1 py-2 px-1 bg-slate-50 rounded-lg text-center border border-slate-100">
-                        {stats.map((stat, idx) => (
-                          <div key={idx} className={`space-y-0.5 ${idx < 2 ? 'border-r-2 border-slate-200' : ''}`}>
-                            <span className="block text-[8px] font-black uppercase tracking-widest text-slate-500">
-                              {stat.label}
-                            </span>
-                            <span className="block font-mono text-[11px] font-black text-slate-900">
-                              {stat.value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* 6. Outcomes (現場の直感性を重視した緑チェックマークのアウトカム表示) */}
-                      <div className="flex flex-wrap gap-1.5">
-                        {outcomes.map((outcome) => (
-                          <span key={outcome} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-emerald-50 text-emerald-950 font-black text-[10px] border border-emerald-250 shadow-sm shrink-0">
-                            ✔ {outcome}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* 7. Primary CTA (Muddy/Wet screenでも確実にとらえられる高さ52pxの極太フルワイドボタン) */}
-                      <div className="pt-2">
-                        <div className="w-full h-[52px] min-h-[52px] bg-indigo-700 hover:bg-indigo-850 group-hover:bg-indigo-650 text-white font-black text-sm rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-95">
-                          <span>Hire Now</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
+              Clear Filter ✕
+            </button>
+          </div>
+          
+          {filteredEquipment.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredEquipment.map((item) => renderEquipmentCard(item))}
             </div>
-          );
-        })}
-      </div>
+          ) : (
+            <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              <p className="text-slate-500 font-medium">No equipment found matching "{searchQuery}"</p>
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="mt-3 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all cursor-pointer"
+              >
+                Show All Equipment
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Categories Grid - Denser, High-Contrast & Fast to Scan */}
+          <div className="w-full px-5 py-6 max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-tight border-l-4 border-indigo-600 pl-2">Categories</h2>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">8 Types</span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {CATEGORIES.map((category) => (
+                <a 
+                  key={category.id} 
+                  href={`#${category.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById(category.id)?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      document.getElementById(category.id)?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="group relative flex flex-col rounded-2xl overflow-hidden aspect-square bg-slate-100 border border-slate-200 hover:border-indigo-500 hover:shadow-md transition-all duration-300 cursor-pointer select-none focus-visible:ring-3 focus-visible:ring-indigo-500"
+                >
+                  {/* Background Image */}
+                  <div className="absolute inset-0 w-full h-full">
+                    <img 
+                      src={category.image} 
+                      alt={category.name} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/images/mini_digger_1781357985087.webp';
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Subtle ambient shadow overlay */}
+                  <div className="absolute inset-0 bg-black/5 group-hover:bg-black/15 transition-colors duration-300"></div>
+
+                  {/* Theme-compliant floating label pill (matches reference mockup exactly and scales across light/dark modes) */}
+                  <div className="absolute bottom-3 left-3 right-3 category-pill backdrop-blur-[2px] rounded-xl px-3 py-3 flex justify-between items-center shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-all duration-300 group-hover:translate-y-[-1px] z-20">
+                    <span className="font-extrabold text-xs sm:text-sm tracking-tight truncate">
+                      {category.name}
+                    </span>
+                    <ChevronRight className="w-4 h-4 shrink-0 ml-1 opacity-80" />
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Equipment Products per Category */}
+          <div className="w-full px-5 py-4 max-w-7xl mx-auto space-y-12">
+            {CATEGORIES.map(category => {
+              const categoryEquipment = INITIAL_EQUIPMENT.filter(item => item.category === category.id).slice(0, 6);
+              if (categoryEquipment.length === 0) return null;
+
+              return (
+                <div key={category.id} id={category.id} className="scroll-mt-6">
+                  <h3 className="text-2xl font-black text-slate-800 mb-6 border-b-2 border-slate-100 pb-2 flex justify-between items-end">
+                    {category.name}
+                    <Link to={`/customer`} className="text-indigo-600 text-sm font-bold hover:underline mb-1 flex items-center gap-1">
+                      View All <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {categoryEquipment.map((item) => renderEquipmentCard(item))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
     </div>
   );
