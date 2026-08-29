@@ -16,7 +16,7 @@ export default function QuickJobFinder() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const currentQuery = searchParams.get('q') || '';
+  const currentQuery = searchParams.get('tab') || '';
 
   const handleTabClick = (query: string) => {
     const isCustomerPage = location.pathname.startsWith('/customer');
@@ -24,17 +24,18 @@ export default function QuickJobFinder() {
 
     if (!isCustomerPage || !isCatalogPage) {
       if (query) {
-        navigate(`/customer?q=${encodeURIComponent(query)}`);
+        navigate(`/customer?tab=${encodeURIComponent(query)}`);
       } else {
         navigate('/customer');
       }
     } else {
       setSearchParams(prev => {
         if (query) {
-          prev.set('q', query);
+          prev.set('tab', query);
         } else {
-          prev.delete('q');
+          prev.delete('tab');
         }
+        prev.delete('q'); // Clear search query when tab is selected
         return prev;
       });
     }

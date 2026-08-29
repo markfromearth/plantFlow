@@ -12,7 +12,7 @@ const CATEGORIES = [
     label: '1.5t – 8t Excavators',
     attribute: 'Tonnage: 1.5t - 8.0t',
     subSizes: 'Micro / 1.5t / 3t / 5t / 8t',
-    image: '/images/mini_digger_1781357985087.webp' 
+    image: '/images/cat_toy_excavators.png' 
   },
   { 
     id: 'Dumpers', 
@@ -20,7 +20,7 @@ const CATEGORIES = [
     label: '1t – 9t Site Dumpers',
     attribute: 'Payload: 1.0t - 9.0t',
     subSizes: '500kg / 1t / 3t / 6t / 9t',
-    image: '/images/hi_tip_dumper_1781358015457.webp' 
+    image: '/images/cat_toy_dumpers.png' 
   },
   { 
     id: 'Compaction', 
@@ -28,7 +28,7 @@ const CATEGORIES = [
     label: 'Vibrating Plates & Rollers',
     attribute: 'Width: 350mm - 1200mm',
     subSizes: '350mm / 500mm / 800mm / 1200mm',
-    image: '/images/wacker_plate_1781358033267.webp' 
+    image: '/images/cat_toy_compaction.png' 
   },
   { 
     id: 'Groundcare', 
@@ -36,7 +36,7 @@ const CATEGORIES = [
     label: 'Trenchers & Landscaping',
     attribute: 'Reach: Up to 600mm depth',
     subSizes: 'Trencher / Grinder / Rotavator',
-    image: '/images/trencher_1781358047416.webp' 
+    image: '/images/cat_toy_groundcare.png' 
   },
   { 
     id: 'Access', 
@@ -44,7 +44,7 @@ const CATEGORIES = [
     label: 'Scissor Lifts & Towers',
     attribute: 'Working Height: 4m - 14m',
     subSizes: 'Scissor / Boom / Tower / Pop-Up',
-    image: '/images/scissor_lift_1781358239898.webp' 
+    image: '/images/cat_toy_access.png' 
   },
   { 
     id: 'Power & Light', 
@@ -52,7 +52,7 @@ const CATEGORIES = [
     label: '3kVA – 10kVA Generators',
     attribute: 'Rating: 3kVA - 10kVA',
     subSizes: '3kVA / 6kVA / 10kVA Silenced',
-    image: '/images/generator_3kva_1781358330592.webp' 
+    image: '/images/cat_toy_power_light.png' 
   },
   { 
     id: 'Breaking', 
@@ -60,7 +60,7 @@ const CATEGORIES = [
     label: 'Heavy Breakers & Saws',
     attribute: 'Power: 110V site electric',
     subSizes: 'Medium / Heavy / Hydraulic / Saw',
-    image: '/images/breaker_110v_1781358344746.webp' 
+    image: '/images/cat_toy_breaking.png' 
   },
   { 
     id: 'Floor Care', 
@@ -68,7 +68,7 @@ const CATEGORIES = [
     label: 'Floor Sanders & Cleaners',
     attribute: 'Power: 240V / 110V clean-care',
     subSizes: 'Sander / Edger / Carpet Cleaner / Vac',
-    image: '/images/floor_sander_1781358280768.webp' 
+    image: '/images/cat_toy_floor_care.png' 
   }
 ];
 
@@ -375,6 +375,7 @@ export default function CustomerHome() {
   useDocumentTitle("Hire Equipment");
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') || '';
+  const activeTab = searchParams.get('tab') || '';
 
   const setSearchQuery = (val: string) => {
     setSearchParams(prev => {
@@ -383,8 +384,17 @@ export default function CustomerHome() {
       } else {
         prev.delete('q');
       }
+      prev.delete('tab'); // Clear tab selection when typing search query
       return prev;
     }, { replace: true });
+  };
+
+  const clearFilters = () => {
+    setSearchParams(prev => {
+      prev.delete('q');
+      prev.delete('tab');
+      return prev;
+    });
   };
 
   const [favourites, setFavourites] = useState<string[]>([]);
@@ -417,14 +427,15 @@ export default function CustomerHome() {
   }, [searchQuery]);
 
   const filteredEquipment = useMemo(() => {
-    if (!searchQuery.trim()) return INITIAL_EQUIPMENT;
-    const query = searchQuery.toLowerCase();
+    const filterTerm = searchQuery || activeTab;
+    if (!filterTerm.trim()) return INITIAL_EQUIPMENT;
+    const query = filterTerm.toLowerCase();
     return INITIAL_EQUIPMENT.filter(item => 
       item.name.toLowerCase().includes(query) || 
       item.category.toLowerCase().includes(query) ||
       (item.job_fit && item.job_fit.toLowerCase().includes(query))
     );
-  }, [searchQuery]);
+  }, [searchQuery, activeTab]);
 
   const renderEquipmentCard = (item: any) => {
     const isAvailable = item.availability_status === 'available';
@@ -637,11 +648,21 @@ export default function CustomerHome() {
             <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest shrink-0">Quick Job Finder:</span>
             <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 select-none">
               {quickJobs.map(job => {
-                const isActive = searchQuery === job.query;
+                const isActive = activeTab === job.query;
                 return (
                   <button
                     key={job.label}
-                    onClick={() => setSearchQuery(job.query)}
+                    onClick={() => {
+                      setSearchParams(prev => {
+                        if (job.query) {
+                          prev.set('tab', job.query);
+                        } else {
+                          prev.delete('tab');
+                        }
+                        prev.delete('q');
+                        return prev;
+                      });
+                    }}
                     className={`flex items-center gap-1.5 pb-2 px-1 relative transition-colors cursor-pointer border-b-2 shrink-0 ${
                       isActive 
                         ? 'border-white text-white font-black' 
@@ -658,14 +679,14 @@ export default function CustomerHome() {
         </div>
       </div>
 
-      {searchQuery.trim() ? (
+      {(searchQuery.trim() || activeTab.trim()) ? (
         <div className="w-full px-5 py-6 max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 border-l-4 border-indigo-650 pl-2">
-              Results for "{searchQuery}"
+              Results for "{searchQuery || activeTab}"
             </h2>
             <button 
-              onClick={() => setSearchQuery('')}
+              onClick={clearFilters}
               className="text-sm font-bold text-indigo-600 hover:underline cursor-pointer"
             >
               Clear Filter ✕
@@ -678,9 +699,9 @@ export default function CustomerHome() {
             </div>
           ) : (
             <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-              <p className="text-slate-500 font-medium">No equipment found matching "{searchQuery}"</p>
+              <p className="text-slate-500 font-medium">No equipment found matching "{searchQuery || activeTab}"</p>
               <button 
-                onClick={() => setSearchQuery('')}
+                onClick={clearFilters}
                 className="mt-3 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all cursor-pointer"
               >
                 Show All Equipment
@@ -690,14 +711,14 @@ export default function CustomerHome() {
         </div>
       ) : (
         <>
-          {/* Categories Grid - Denser, High-Contrast & Fast to Scan */}
-          <div className="w-full px-5 py-6 max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-tight border-l-4 border-indigo-600 pl-2">Categories</h2>
+          {/* Categories Grid - Airbnb-style Square Layout on One Line */}
+          <div className="w-full px-5 py-8 max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-tight border-l-4 border-indigo-650 pl-2">Categories</h2>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">8 Types</span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 select-none md:grid md:grid-cols-8 md:gap-4 lg:gap-6 justify-between">
               {CATEGORIES.map((category) => (
                 <a 
                   key={category.id} 
@@ -712,31 +733,25 @@ export default function CustomerHome() {
                       document.getElementById(category.id)?.scrollIntoView({ behavior: 'smooth' });
                     }
                   }}
-                  className="group relative flex flex-col rounded-2xl overflow-hidden aspect-square bg-slate-100 border border-slate-200 hover:border-indigo-500 hover:shadow-md transition-all duration-300 cursor-pointer select-none focus-visible:ring-3 focus-visible:ring-indigo-500"
+                  className="group flex flex-col items-center shrink-0 w-24 sm:w-28 md:w-full focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-indigo-500 rounded-2xl"
                 >
-                  {/* Background Image */}
-                  <div className="absolute inset-0 w-full h-full">
+                  {/* Square image container styled like Airbnb reference */}
+                  <div className="w-full aspect-square bg-[#f7f7f7] rounded-[24px] overflow-hidden flex items-center justify-center border border-slate-100 group-hover:shadow-md group-hover:border-slate-205 group-hover:border-slate-200 transition-all duration-300">
                     <img 
                       src={category.image} 
                       alt={category.name} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      className="max-w-[85%] max-h-[85%] object-contain group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
-                        e.currentTarget.src = '/images/mini_digger_1781357985087.webp';
+                        e.currentTarget.src = '/images/cat_toy_excavators.png';
                       }}
                     />
                   </div>
                   
-                  {/* Subtle ambient shadow overlay */}
-                  <div className="absolute inset-0 bg-black/5 group-hover:bg-black/15 transition-colors duration-300"></div>
-
-                  {/* Theme-compliant floating label pill (matches reference mockup exactly and scales across light/dark modes) */}
-                  <div className="absolute bottom-3 left-3 right-3 category-pill backdrop-blur-[2px] rounded-xl px-3 py-3 flex justify-between items-center shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-all duration-300 group-hover:translate-y-[-1px] z-20">
-                    <span className="font-extrabold text-xs sm:text-sm tracking-tight truncate">
-                      {category.name}
-                    </span>
-                    <ChevronRight className="w-4 h-4 shrink-0 ml-1 opacity-80" />
-                  </div>
+                  {/* Label below the square */}
+                  <span className="mt-2.5 text-center text-xs sm:text-sm font-semibold text-slate-805 text-slate-800 group-hover:text-indigo-600 transition-colors">
+                    {category.name}
+                  </span>
                 </a>
               ))}
             </div>
