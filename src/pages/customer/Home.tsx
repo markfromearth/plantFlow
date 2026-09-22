@@ -718,7 +718,7 @@ export default function CustomerHome() {
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">8 Types</span>
             </div>
 
-            <div className="flex gap-4 overflow-x-auto scrollbar-none pb-2 select-none md:grid md:grid-cols-8 md:gap-4 lg:gap-6 justify-between">
+            <div className="flex items-center gap-6 overflow-x-auto scrollbar-none pb-2 select-none h-14">
               {CATEGORIES.map((category) => (
                 <a 
                   key={category.id} 
@@ -733,25 +733,18 @@ export default function CustomerHome() {
                       document.getElementById(category.id)?.scrollIntoView({ behavior: 'smooth' });
                     }
                   }}
-                  className="group flex flex-col items-center shrink-0 w-24 sm:w-28 md:w-full focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-indigo-500 rounded-2xl"
+                  className="h-full flex items-center gap-2 border-b-2 border-transparent px-1 text-sm transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-t text-slate-500 hover:text-slate-900 hover:border-slate-200 font-semibold whitespace-nowrap shrink-0"
                 >
-                  {/* Square image container styled like Airbnb reference */}
-                  <div className="w-full aspect-square bg-[#f7f7f7] rounded-[24px] overflow-hidden flex items-center justify-center border border-slate-100 group-hover:shadow-md group-hover:border-slate-205 group-hover:border-slate-200 transition-all duration-300">
-                    <img 
-                      src={category.image} 
-                      alt={category.name} 
-                      className="max-w-[85%] max-h-[85%] object-contain group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = '/images/cat_toy_excavators.png';
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Label below the square */}
-                  <span className="mt-2.5 text-center text-xs sm:text-sm font-semibold text-slate-805 text-slate-800 group-hover:text-indigo-600 transition-colors">
-                    {category.name}
-                  </span>
+                  <img 
+                    src={category.image} 
+                    alt={category.name} 
+                    className="w-6 h-6 object-contain shrink-0"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/images/cat_toy_excavators.png';
+                    }}
+                  />
+                  <span>{category.name}</span>
                 </a>
               ))}
             </div>
